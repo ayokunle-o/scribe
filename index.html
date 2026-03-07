@@ -8,8 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --primary: #cc785c;
-  --primary-container: rgba(204,120,92,0.15);
+  --primary: #4CAF82;
+  --primary-container: rgba(76,175,130,0.15);
   --bg: #111318;
   --surface: #1d1f27;
   --surface-variant: #252836;
@@ -19,7 +19,7 @@
   --outline-variant: #2a2d38;
   --error: #f2736a;
   --scrim: rgba(0,0,0,0.6);
-  --tag-bg: rgba(204,120,92,0.18);
+  --tag-bg: rgba(76,175,130,0.18);
   --e1: 0 1px 2px rgba(0,0,0,0.45), 0 1px 3px 1px rgba(0,0,0,0.3);
   --e2: 0 1px 2px rgba(0,0,0,0.45), 0 2px 6px 2px rgba(0,0,0,0.3);
   --e3: 0 4px 8px 3px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.45);
@@ -37,7 +37,7 @@
   --outline: #cac5bf;
   --outline-variant: #e0dbd4;
   --scrim: rgba(0,0,0,0.4);
-  --tag-bg: rgba(204,120,92,0.12);
+  --tag-bg: rgba(76,175,130,0.12);
   --e1: 0 1px 2px rgba(0,0,0,0.12), 0 1px 3px 1px rgba(0,0,0,0.08);
   --e2: 0 1px 2px rgba(0,0,0,0.12), 0 2px 6px 2px rgba(0,0,0,0.08);
   --e3: 0 4px 8px 3px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12);
@@ -158,7 +158,7 @@ body {
   transition:box-shadow .2s,transform .2s var(--ease-out),opacity .2s;
 }
 #fab::before { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; }
-#fab:hover { box-shadow:var(--e3),0 0 0 4px rgba(204,120,92,.15); transform:translateY(-1px); }
+#fab:hover { box-shadow:var(--e3),0 0 0 4px rgba(76,175,130,.15); transform:translateY(-1px); }
 #fab:hover::before { opacity:.08; }
 #fab:active { transform:scale(.96); }
 #fab.hidden { transform:translateY(80px) scale(.85); opacity:0; pointer-events:none; }
@@ -590,13 +590,13 @@ body {
 <!-- WELCOME -->
 <div id="welcome">
   <svg width="120" height="120" viewBox="0 0 120 120" fill="none" style="margin-bottom:32px">
-    <circle cx="60" cy="60" r="56" fill="rgba(204,120,92,0.1)" stroke="rgba(204,120,92,0.25)" stroke-width="1.5"/>
-    <rect x="32" y="28" width="56" height="68" rx="6" fill="none" stroke="#cc785c" stroke-width="2"/>
-    <line x1="44" y1="48" x2="76" y2="48" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
-    <line x1="44" y1="58" x2="68" y2="58" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
-    <line x1="44" y1="68" x2="72" y2="68" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
-    <line x1="44" y1="78" x2="60" y2="78" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="85" cy="82" r="16" fill="#cc785c"/>
+    <circle cx="60" cy="60" r="56" fill="rgba(76,175,130,0.1)" stroke="rgba(76,175,130,0.25)" stroke-width="1.5"/>
+    <rect x="32" y="28" width="56" height="68" rx="6" fill="none" stroke="#4CAF82" stroke-width="2"/>
+    <line x1="44" y1="48" x2="76" y2="48" stroke="#4CAF82" stroke-width="2" stroke-linecap="round"/>
+    <line x1="44" y1="58" x2="68" y2="58" stroke="#4CAF82" stroke-width="2" stroke-linecap="round"/>
+    <line x1="44" y1="68" x2="72" y2="68" stroke="#4CAF82" stroke-width="2" stroke-linecap="round"/>
+    <line x1="44" y1="78" x2="60" y2="78" stroke="#4CAF82" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="85" cy="82" r="16" fill="#4CAF82"/>
     <path d="M79 82l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
   <div class="welcome-title">NoteSnap</div>
