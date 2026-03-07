@@ -257,20 +257,28 @@ body {
   color:var(--error); letter-spacing:.04em;
 }
 
-.voice-transcript-box {
+.voice-waveform-box {
   background:var(--surface-variant); border-radius:16px;
-  padding:16px; min-height:100px; max-height:180px;
-  overflow-y:auto; margin-bottom:16px;
+  padding:24px 16px; margin-bottom:16px;
+  display:flex; flex-direction:column; align-items:center; gap:16px;
+  min-height:120px; justify-content:center;
 }
-.voice-transcript-label {
-  font-size:11px; text-transform:uppercase; letter-spacing:.8px;
-  color:var(--on-surface-variant); margin-bottom:8px;
-  font-family:'Google Sans',sans-serif; font-weight:500;
+.waveform {
+  display:flex; align-items:center; gap:3px; height:48px;
 }
-.voice-transcript-text {
-  font-size:14px; line-height:1.7; color:var(--on-surface);
+.waveform-bar {
+  width:3px; border-radius:2px; background:var(--primary);
+  animation:wave 1.2s ease-in-out infinite;
+  transform-origin:bottom;
 }
-.voice-transcript-text.empty { color:var(--on-surface-variant); font-style:italic; }
+@keyframes wave {
+  0%,100% { height:6px;  opacity:.35; }
+  50%      { height:36px; opacity:1;   }
+}
+.voice-size-label {
+  font-size:12px; color:var(--on-surface-variant);
+  font-family:'Google Sans',sans-serif;
+}
 .voice-stop-btn {
   width:100%; height:48px; border-radius:24px;
   background:var(--error); color:#fff; border:none;
@@ -512,7 +520,7 @@ body {
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
         </button>
         <div class="voice-idle-label">Tap to start recording</div>
-        <div class="voice-idle-sub">Speak naturally — AI will take notes for you</div>
+        <div class="voice-idle-sub">Record your lecture, sermon, or meeting — AI writes the notes</div>
       </div>
 
       <!-- VOICE MODE: active recording -->
@@ -522,11 +530,10 @@ body {
             <div class="rec-dot"></div>
             <span class="rec-timer" id="voice-timer">00:00</span>
           </div>
-
         </div>
-        <div class="voice-transcript-box">
-          <div class="voice-transcript-label">Live transcript</div>
-          <div class="voice-transcript-text empty" id="voice-transcript">Listening…</div>
+        <div class="voice-waveform-box">
+          <div class="waveform" id="voice-waveform"></div>
+          <div class="voice-size-label" id="voice-size-label">Recording…</div>
         </div>
         <button class="voice-stop-btn" onclick="stopVoiceRecording()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
@@ -769,13 +776,13 @@ body {
 <script>
 'use strict';
 
-// ── CONSTANTS (top-level so nothing references before init) ──────────────────
+// -- CONSTANTS (top-level so nothing references before init) ------------------
 const ICON_MOON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const ICON_SUN  = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 const VIEWS     = ['capture','library','settings'];
 const API_URL   = k => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${k}`;
 
-// ── STATE ────────────────────────────────────────────────────────────────────
+// -- STATE --------------------------------------------------------------------
 const S = {
   view: 'capture',
   notes: [],
@@ -791,18 +798,19 @@ const S = {
   voiceRecording: false,
 };
 
-// Voice recording engine refs (not in S — these are mutable refs not serialised state)
+// Voice recording engine refs (not in S - these are mutable refs not serialised state)
 const VR = {
-  recognition:   null,
-  clockInterval: null,
-  mediaStream:   null,   // kept so we can stop mic tracks on end
-  seconds:       0,
-  finalSegments: [],     // append-only array of confirmed final SR segments
-  finalizing:    false,
+  mediaRecorder:  null,
+  audioChunks:    [],
+  clockInterval:  null,
+  sizeInterval:   null,
+  seconds:        0,
+  finalizing:     false,
 };
+const AUDIO_BITRATE = 24000; // 24kbps mono - voice quality, fits ~90min in 20MB
 const formatTime = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
-// ── UTILS ────────────────────────────────────────────────────────────────────
+// -- UTILS --------------------------------------------------------------------
 function safeJSON(str, fb) {
   if (!str) return fb;
   try { const v = JSON.parse(str); return (v !== null && v !== undefined) ? v : fb; } catch { return fb; }
@@ -812,7 +820,7 @@ function esc(s) {
 }
 function hide(id, yes) { document.getElementById(id).classList.toggle('hidden', yes); }
 
-// Snackbar — double-rAF prevents display:none -> display:flex transition being skipped
+// Snackbar - double-rAF prevents display:none -> display:flex transition being skipped
 let _snackT = null;
 function snack(msg) {
   const el = document.getElementById('snackbar');
@@ -825,7 +833,7 @@ function snack(msg) {
   }));
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
+// -- INIT ---------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
   S.notes  = safeJSON(localStorage.getItem('ns_notes'), []);
   S.theme  = localStorage.getItem('ns_theme') || 'dark';
@@ -835,7 +843,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (S.apiKey) document.getElementById('api-key-input').value = S.apiKey;
 
-  // Tab delegation — only within detail-sheet
+  // Tab delegation - only within detail-sheet
   document.getElementById('detail-tabs').addEventListener('click', function (e) {
     const btn = e.target.closest('[data-tab]');
     if (btn) switchTab(btn.dataset.tab);
@@ -856,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 
-// ── WELCOME ──────────────────────────────────────────────────────────────────
+// -- WELCOME ------------------------------------------------------------------
 function startApp() {
   localStorage.setItem('ns_first_run', '1');
   const w = document.getElementById('welcome');
@@ -866,7 +874,7 @@ function startApp() {
   if (!S.apiKey) setTimeout(() => { switchView('settings'); snack('Add your Gemini API key to begin'); }, 440);
 }
 
-// ── NAVIGATION ───────────────────────────────────────────────────────────────
+// -- NAVIGATION ---------------------------------------------------------------
 function switchView(name) {
   if (!VIEWS.includes(name)) return;
   S.view = name;
@@ -879,7 +887,7 @@ function switchView(name) {
   if (name === 'settings') updateStorage();
 }
 
-// ── FILES ────────────────────────────────────────────────────────────────────
+// -- FILES --------------------------------------------------------------------
 function handleFiles(e) {
   const files = Array.from(e.target.files);
   e.target.value = '';
@@ -905,7 +913,7 @@ function renderPreviews() {
     wrap.appendChild(d);
   });
   const has = S.files.length > 0;
-  // Only manipulate photo UI — don't touch voice panels
+  // Only manipulate photo UI - don't touch voice panels
   if (S.captureMode === 'photo') {
     hide('capture-idle', has);
     hide('capture-files', !has);
@@ -928,7 +936,7 @@ function updateFAB() {
   document.getElementById('process-btn-wrap').classList.toggle('hidden', !(S.view === 'capture' && S.captureMode === 'photo' && S.files.length > 0));
 }
 
-// ── PROCESS ──────────────────────────────────────────────────────────────────
+// -- PROCESS ------------------------------------------------------------------
 async function processNotes() {
   if (!S.apiKey) { switchView('settings'); snack('Add your API key in Settings'); return; }
   if (!S.files.length) { snack('Select at least one image first'); return; }
@@ -937,11 +945,11 @@ async function processNotes() {
 
   const PROMPT = `You are a handwriting transcription assistant. Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. Treat multiple images as consecutive pages of one note.
 
-Return ONLY a valid JSON object — no markdown, no code fences, no extra text:
+Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
   "transcription": "raw handwriting as clean digital text preserving original structure",
-  "organized_text": "a well-formatted markdown version — use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate.",
+  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate.",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
@@ -1014,7 +1022,7 @@ function setProcessing(on) {
   if (pbtn) { pbtn.disabled = on; }
 }
 
-// ── LIBRARY ──────────────────────────────────────────────────────────────────
+// -- LIBRARY ------------------------------------------------------------------
 function renderLibrary() {
   const q    = (document.getElementById('search-input').value || '').toLowerCase().trim();
   const sort = document.getElementById('sort-select').value;
@@ -1048,7 +1056,7 @@ function renderLibrary() {
       + '<div class="card-avatar">' + letter + '</div>'
       + '<div class="card-header-text">'
       + '<div class="card-title">' + esc(n.title) + '</div>'
-      + '<div class="card-meta">' + dateStr + (n.source === 'voice' ? ' · ' + formatTime(n.duration || 0) + ' recording' : ' · ' + n.images.length + ' page' + (n.images.length !== 1 ? 's' : '')) + '</div>'
+      + '<div class="card-meta">' + dateStr + (n.source === 'voice' ? ' ? ' + formatTime(n.duration || 0) + ' recording' : ' ? ' + n.images.length + ' page' + (n.images.length !== 1 ? 's' : '')) + '</div>'
       + '</div></div>'
       + '<div class="card-snippet">' + snippet + '</div>'
       + '<div class="chips-row">' + tags + '</div>'
@@ -1074,7 +1082,7 @@ function filterTag(e, tag) {
   renderLibrary();
 }
 
-// ── DETAIL ───────────────────────────────────────────────────────────────────
+// -- DETAIL -------------------------------------------------------------------
 function openNote(id) {
   const note = S.notes.find(n => n.id === id);
   if (!note) return;
@@ -1144,7 +1152,7 @@ function deleteCurrentNote() {
   persist(); closeSheet('detail-sheet'); renderLibrary(); snack('Note deleted');
 }
 
-// ── SHEETS ───────────────────────────────────────────────────────────────────
+// -- SHEETS -------------------------------------------------------------------
 function openSheet(id) {
   S.sheetsOpen++;
   document.getElementById('scrim').classList.add('open');
@@ -1163,7 +1171,7 @@ function closeAllSheets() {
   document.body.style.overflow = '';
 }
 
-// ── SETTINGS ─────────────────────────────────────────────────────────────────
+// -- SETTINGS -----------------------------------------------------------------
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) { snack('Please enter an API key'); return; }
@@ -1214,11 +1222,11 @@ function clearAllData() {
 
 function persist() {
   try { localStorage.setItem('ns_notes', JSON.stringify(S.notes)); }
-  catch(e) { snack('Storage full — export and delete old notes'); }
+  catch(e) { snack('Storage full - export and delete old notes'); }
   updateStorage();
 }
 
-// ── THEME ─────────────────────────────────────────────────────────────────────
+// -- THEME ---------------------------------------------------------------------
 function toggleTheme() {
   S.theme = S.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('ns_theme', S.theme);
@@ -1229,7 +1237,7 @@ function applyTheme() {
   document.getElementById('theme-icon').innerHTML = S.theme === 'dark' ? ICON_MOON : ICON_SUN;
 }
 
-// ── LIGHTBOX ──────────────────────────────────────────────────────────────────
+// -- LIGHTBOX ------------------------------------------------------------------
 function openLightbox(src) {
   document.getElementById('lb-img').src = src;
   document.getElementById('lightbox').classList.add('open');
@@ -1244,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// ── VOICE RECORDING ──────────────────────────────────────────────────────────
+// -- VOICE RECORDING ----------------------------------------------------------
 function switchCaptureMode(mode) {
   S.captureMode = mode;
   document.getElementById('mode-photo-btn').classList.toggle('active', mode === 'photo');
@@ -1260,168 +1268,142 @@ function switchCaptureMode(mode) {
   updateFAB();
 }
 
-function voiceGetTranscript() {
-  return VR.finalSegments.join(' ');
-}
-
-function startVoiceSpeechRecognition() {
-  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Speech) { snack('Speech recognition not supported in this browser'); return false; }
-
-  function createSession() {
-    const rec = new Speech();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'en-US';
-
-    // Track which result indices we've already committed as final
-    // so a new session (after auto-restart) doesn't re-add them.
-    const committedIndices = new Set();
-
-    rec.onresult = e => {
-      let interimText = '';
-
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          // Only append if we haven't seen this index before in this session
-          if (!committedIndices.has(i)) {
-            committedIndices.add(i);
-            VR.finalSegments.push(e.results[i][0].transcript.trim());
-          }
-        } else {
-          interimText += e.results[i][0].transcript;
-        }
-      }
-
-      // Live display: committed finals + current interim
-      const base = VR.finalSegments.join(' ');
-      const full = interimText ? base + ' ' + interimText : base;
-      const preview = full.length > 300 ? '…' + full.slice(-300) : full;
-      const el = document.getElementById('voice-transcript');
-      el.textContent = preview || 'Listening…';
-      el.classList.toggle('empty', !preview);
-    };
-
-    rec.onerror = e => {
-      if (e.error === 'no-speech' || e.error === 'network') {
-        setTimeout(() => {
-          if (!VR.finalizing) createSession();
-        }, 500);
-      }
-    };
-
-    rec.onend = () => {
-      if (!VR.finalizing) setTimeout(() => createSession(), 300);
-    };
-
-    VR.recognition = rec;
-    try { rec.start(); } catch(e) { console.warn('[Voice] SR start failed', e); }
+// -- WAVEFORM ANIMATION -------------------------------------------------------
+function buildWaveform() {
+  const wrap = document.getElementById('voice-waveform');
+  wrap.innerHTML = '';
+  const bars = 24;
+  for (let i = 0; i < bars; i++) {
+    const b = document.createElement('div');
+    b.className = 'waveform-bar';
+    b.style.animationDelay = (i * (1.2 / bars)).toFixed(2) + 's';
+    wrap.appendChild(b);
   }
-
-  createSession();
-  return true;
 }
 
-function voiceCleanTranscriptPass(raw) {
-  // Single dedup pass: walk words, skip any incoming sequence that matches
-  // the tail of what we've already output (catches SR restart repetitions)
-  const words = raw.trim().split(/\s+/);
-  const out = [];
-  let i = 0;
-  while (i < words.length) {
-    let skipped = false;
-    const maxLook = Math.min(12, words.length - i, out.length);
-    for (let w = maxLook; w >= 2; w--) {
-      const incoming = words.slice(i, i + w).join(' ').toLowerCase();
-      const tail = out.slice(-w).join(' ').toLowerCase();
-      if (incoming === tail) { i += w; skipped = true; break; }
-    }
-    if (!skipped) { out.push(words[i]); i++; }
-  }
-  return out.join(' ').trim();
+function formatBytes(bytes) {
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-function voiceCleanTranscript(raw) {
-  if (!raw) return '';
-  // Two passes handle nested SR repetition layers (safety net — primary fix
-  // is in the SR handler which only stores isFinal=true segments)
-  let clean = voiceCleanTranscriptPass(raw);
-  clean = voiceCleanTranscriptPass(clean);
-  // Hard cap at word boundary near 12000 chars (~3000 words)
-  if (clean.length > 12000) {
-    clean = clean.slice(0, 12000);
-    const lastSpace = clean.lastIndexOf(' ');
-    if (lastSpace > 11000) clean = clean.slice(0, lastSpace);
-    clean += '…';
-  }
-  return clean;
+// -- MEDIARECORDER HELPERS -----------------------------------------------------
+function getBestMimeType() {
+  // Prefer opus in webm at low bitrate - best compression for voice
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ];
+  return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
 }
 
+function getGeminiMimeType(recorderMime) {
+  // Gemini accepts: audio/wav, audio/mp3, audio/aiff, audio/aac, audio/ogg, audio/flac, audio/webm
+  if (recorderMime.includes('webm')) return 'audio/webm';
+  if (recorderMime.includes('ogg'))  return 'audio/ogg';
+  if (recorderMime.includes('mp4'))  return 'audio/mp4';
+  return 'audio/webm';
+}
+
+// -- VOICE RECORDING -----------------------------------------------------------
 async function startVoiceRecording() {
   if (!S.apiKey) { switchView('settings'); snack('Add your API key in Settings first'); return; }
 
-  // Request mic — store stream so we can stop tracks on end
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
   } catch {
     snack('Microphone access denied'); return;
   }
-  VR.mediaStream = stream;
 
   // Reset state
-  VR.finalSegments = [];
-  VR.seconds       = 0;
-  VR.finalizing    = false;
-
+  VR.audioChunks = [];
+  VR.seconds     = 0;
+  VR.finalizing  = false;
   S.voiceRecording = true;
-  document.getElementById('voice-transcript').textContent = 'Listening…';
-  document.getElementById('voice-transcript').classList.add('empty');
+
+  // Build waveform bars
+  buildWaveform();
+
+  // MediaRecorder at low bitrate
+  const mimeType = getBestMimeType();
+  const options = { mimeType };
+  try { options.audioBitsPerSecond = AUDIO_BITRATE; } catch {}
+  VR.mediaRecorder = new MediaRecorder(stream, options);
+  VR.mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) VR.audioChunks.push(e.data); };
+  VR.mediaRecorder.start(1000); // collect chunks every second
 
   // Switch UI
   hide('voice-idle',      true);
   hide('voice-recording', false);
   document.getElementById('capture-mode-switch').style.pointerEvents = 'none';
   document.getElementById('progress-bar').classList.add('visible');
+  document.getElementById('voice-size-label').textContent = 'Recording...';
 
-  // Start speech recognition
-  startVoiceSpeechRecognition();
-
-  // Clock
+  // Clock + size indicator
   VR.clockInterval = setInterval(() => {
     VR.seconds++;
     document.getElementById('voice-timer').textContent = formatTime(VR.seconds);
   }, 1000);
+
+  VR.sizeInterval = setInterval(() => {
+    const bytes = VR.audioChunks.reduce((s, c) => s + c.size, 0);
+    document.getElementById('voice-size-label').textContent = formatBytes(bytes) + ' recorded';
+  }, 3000);
 }
 
 async function stopVoiceRecording() {
   if (!S.voiceRecording) return;
-  VR.finalizing = true;
+  VR.finalizing    = true;
   S.voiceRecording = false;
 
-  // Stop speech recognition
-  if (VR.recognition) { try { VR.recognition.stop(); } catch {} VR.recognition = null; }
-  // Stop mic — releases the browser mic indicator
-  if (VR.mediaStream) { VR.mediaStream.getTracks().forEach(t => t.stop()); VR.mediaStream = null; }
   clearInterval(VR.clockInterval);
+  clearInterval(VR.sizeInterval);
 
-  // Switch UI
+  // Switch UI immediately
   hide('voice-recording',  true);
   hide('voice-finalizing', false);
   document.getElementById('capture-mode-switch').style.pointerEvents = '';
 
-  // Give SR a moment to flush any pending final segment
-  await new Promise(r => setTimeout(r, 800));
-
-  const transcript = voiceCleanTranscript(voiceGetTranscript());
   const label = document.getElementById('voice-finalizing-label');
+  label.textContent = 'Processing audio...';
+
+  // Stop recorder - wait for final chunk via onstop
+  await new Promise(resolve => {
+    VR.mediaRecorder.onstop = resolve;
+    try { VR.mediaRecorder.stop(); } catch { resolve(); }
+  });
+
+  // Stop mic tracks - releases browser mic indicator
+  try {
+    VR.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  } catch {}
 
   try {
-    label.textContent = 'Writing your notes…';
+    if (!VR.audioChunks.length) throw new Error('No audio was captured');
 
-    const prompt = `You are summarizing a recorded session — a lecture, sermon, meeting, or talk — into compact notes, the way a sharp student would write them by hand.
+    const mimeType    = VR.mediaRecorder.mimeType || getBestMimeType();
+    const geminiMime  = getGeminiMimeType(mimeType);
+    const audioBlob   = new Blob(VR.audioChunks, { type: mimeType });
+    const audioSizeMB = audioBlob.size / (1024 * 1024);
 
-${transcript ? `TRANSCRIPT:\n${transcript}` : '(No transcript captured)'}
+    // Soft size warning - Gemini inline limit is ~20MB
+    if (audioSizeMB > 19) throw new Error('Recording too large (' + audioSizeMB.toFixed(1) + ' MB). Try a shorter session or record in a quieter space.');
+
+    label.textContent = 'Reading your recording...';
+
+    // Convert to base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.onerror   = reject;
+      reader.readAsDataURL(audioBlob);
+    });
+
+    label.textContent = 'Writing your notes...';
+
+    const prompt = `You are listening to a recorded session - a lecture, sermon, meeting, or talk. Transcribe what is said, then write compact notes the way a sharp student would write them by hand.
 
 Write notes a person could read in 2 minutes and understand what the session was about. Focus on the 3-5 things that actually mattered. What was the main idea? Was anything actionable or memorable said?
 
@@ -1432,10 +1414,11 @@ Rules:
 - Leave out anything only mentioned in passing
 - The whole summary should fit on one screen
 
-Return ONLY valid JSON — no markdown fences, no extra text:
+Return ONLY valid JSON - no markdown fences, no extra text:
 {
-  "title": "short specific title — max 7 words",
-  "organized_text": "compact notes in markdown — bullets under brief headings",
+  "title": "short specific title - max 7 words",
+  "transcription": "what was said, cleaned up as readable text",
+  "organized_text": "compact notes in markdown - bullets under brief headings",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"]
 }`;
@@ -1444,7 +1427,12 @@ Return ONLY valid JSON — no markdown fences, no extra text:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{
+          parts: [
+            { inlineData: { mimeType: geminiMime, data: base64 } },
+            { text: prompt }
+          ]
+        }],
         generationConfig: { responseMimeType: 'application/json' }
       })
     });
@@ -1455,32 +1443,31 @@ Return ONLY valid JSON — no markdown fences, no extra text:
     let str = (data.candidates?.[0]?.content?.parts?.[0]?.text || '')
       .replace(/```json\s*/gi,'').replace(/```\s*/g,'');
     const i0 = str.indexOf('{'), i1 = str.lastIndexOf('}');
-    if (i0 === -1 || i1 === -1) throw new Error('AI returned invalid JSON');
+    if (i0 === -1 || i1 === -1) throw new Error('AI returned invalid JSON. Please retry.');
     str = str.slice(i0, i1+1).replace(/,(\s*[}\]])/g,'$1');
     const p = JSON.parse(str);
 
     const toArr = v => Array.isArray(v) ? v : (v ? String(v).split('\n').filter(Boolean) : []);
 
     const note = {
-      id: Date.now(),
-      title:          String(p.title || 'Voice Note').trim(),
-      transcription:  transcript,           // raw transcript stored as transcription
-      organized_text: String(p.organized_text || '').trim(),
-      summary:        toArr(p.summary),
-      tags:           toArr(p.tags),
+      id:               Date.now(),
+      title:            String(p.title || 'Voice Note').trim(),
+      transcription:    String(p.transcription || '').trim(),
+      organized_text:   String(p.organized_text || '').trim(),
+      summary:          toArr(p.summary),
+      tags:             toArr(p.tags),
       confidence_notes: '',
-      images:         [],                   // no images for voice notes
-      source:         'voice',              // mark as voice note
-      duration:       VR.seconds,
-      created_at:     new Date().toISOString(),
-      updated_at:     new Date().toISOString(),
+      images:           [],
+      source:           'voice',
+      duration:         VR.seconds,
+      created_at:       new Date().toISOString(),
+      updated_at:       new Date().toISOString(),
     };
 
     S.notes.unshift(note);
     persist();
     label.textContent = 'Done!';
 
-    // Reset voice UI back to idle
     setTimeout(() => {
       hide('voice-finalizing', true);
       hide('voice-idle',       false);
@@ -1491,36 +1478,17 @@ Return ONLY valid JSON — no markdown fences, no extra text:
     }, 600);
 
   } catch(err) {
-    console.error('[Voice]', err);
-    // Salvage: save raw transcript so the session isn't lost
-    const fallbackText = transcript || '(No transcript captured)';
-    const note = {
-      id: Date.now(),
-      title: 'Voice Note',
-      transcription: fallbackText,
-      organized_text: fallbackText,
-      summary: [],
-      tags: [],
-      confidence_notes: 'AI synthesis failed — raw transcript saved.',
-      images: [],
-      source: 'voice',
-      duration: VR.seconds,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    S.notes.unshift(note);
-    persist();
+    console.error('[Scribe]', err);
     document.getElementById('progress-bar').classList.remove('visible');
     hide('voice-finalizing', true);
     hide('voice-idle',       false);
     VR.finalizing = false;
-    switchView('library');
-    snack('Synthesis failed — raw transcript saved');
+    snack(err.message || 'Something went wrong');
   }
 }
 
-// ── MARKDOWN RENDERER ────────────────────────────────────────────────────────
-// Lightweight md→HTML: handles headings, bold, italic, code, lists, blockquotes, hr
+// -- MARKDOWN RENDERER --------------------------------------------------------
+// Lightweight md->HTML: handles headings, bold, italic, code, lists, blockquotes, hr
 function mdToHtml(text) {
   if (!text) return '';
   const lines = text.split('\n');
@@ -1590,7 +1558,7 @@ function renderOrganizedView(text) {
   document.getElementById('organized-view').innerHTML = mdToHtml(text);
 }
 
-// ── EDIT MODE TOGGLE ──────────────────────────────────────────────────────────
+// -- EDIT MODE TOGGLE ----------------------------------------------------------
 let _editMode = false;
 
 function setEditMode(on) {
@@ -1599,7 +1567,7 @@ function setEditMode(on) {
   document.getElementById('detail-organized').classList.toggle('hidden', !on);
   document.getElementById('edit-toggle-label').textContent = on ? 'Preview' : 'Edit';
   document.getElementById('save-btn-wrap').classList.toggle('hidden', !on);
-  // Swap icon: pencil → eye
+  // Swap icon: pencil -> eye
   document.getElementById('edit-toggle-icon').innerHTML = on
     ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'  // eye
     : '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'; // pencil
@@ -1607,7 +1575,7 @@ function setEditMode(on) {
 
 function toggleEditMode() {
   if (_editMode) {
-    // Switching from edit → preview: re-render with current textarea content
+    // Switching from edit -> preview: re-render with current textarea content
     renderOrganizedView(document.getElementById('detail-organized').value);
     setEditMode(false);
   } else {
