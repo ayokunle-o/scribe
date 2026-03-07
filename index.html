@@ -192,6 +192,97 @@ body {
 .error-card { background:rgba(242,115,106,.1); border:1px solid rgba(242,115,106,.35); border-radius:16px; padding:16px; margin-top:12px; }
 .error-title { font-family:'Google Sans',sans-serif; font-size:14px; font-weight:500; color:var(--error); margin-bottom:6px; }
 .error-msg { font-size:13px; color:var(--on-surface-variant); margin-bottom:12px; word-break:break-word; line-height:1.6; }
+/* VOICE RECORDING */
+.capture-mode-switch {
+  display:flex; gap:8px; margin-bottom:20px;
+}
+.mode-btn {
+  flex:1; height:40px; border-radius:20px; border:1px solid var(--outline);
+  background:transparent; color:var(--on-surface-variant);
+  font-family:'Google Sans',sans-serif; font-size:13px; font-weight:500;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;
+  transition:background .2s, color .2s, border-color .2s;
+}
+.mode-btn.active {
+  background:var(--primary-container); color:var(--primary);
+  border-color:var(--primary);
+}
+#voice-idle { text-align:center; padding:32px 8px 24px; }
+.voice-record-btn {
+  width:88px; height:88px; border-radius:50%;
+  background:var(--primary-container); border:2px solid var(--primary);
+  color:var(--primary); cursor:pointer; margin:0 auto 20px;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .2s, transform .15s;
+  position:relative;
+}
+.voice-record-btn:active { transform:scale(.94); }
+.voice-record-btn.recording {
+  background:rgba(242,115,106,.15); border-color:var(--error); color:var(--error);
+}
+.voice-record-btn .pulse-ring {
+  position:absolute; inset:-10px; border-radius:50%;
+  border:1.5px solid var(--primary); opacity:0;
+  animation:none;
+}
+.voice-record-btn.recording .pulse-ring {
+  animation:voice-pulse 1.8s ease-in-out infinite;
+}
+@keyframes voice-pulse {
+  0%  { transform:scale(1);   opacity:.5; }
+  50% { transform:scale(1.2); opacity:0;  }
+  100%{ transform:scale(1);   opacity:.5; }
+}
+.voice-idle-label {
+  font-family:'Google Sans',sans-serif; font-size:16px; font-weight:500;
+  color:var(--on-surface); margin-bottom:6px;
+}
+.voice-idle-sub { font-size:13px; color:var(--on-surface-variant); }
+#voice-recording { padding:8px 0; }
+.voice-rec-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+}
+.voice-rec-badge {
+  display:flex; align-items:center; gap:8px; padding:6px 14px;
+  background:rgba(242,115,106,.1); border:1px solid rgba(242,115,106,.3);
+  border-radius:20px;
+}
+.rec-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--error);
+  animation:rec-blink 1s step-end infinite;
+}
+@keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.rec-timer {
+  font-family:'Google Sans',sans-serif; font-size:14px; font-weight:500;
+  color:var(--error); letter-spacing:.04em;
+}
+.voice-pulse-chip {
+  display:flex; align-items:center; gap:6px; padding:6px 12px;
+  background:var(--primary-container); border:1px solid rgba(76,175,130,.3);
+  border-radius:20px; font-size:12px; color:var(--primary);
+}
+.voice-transcript-box {
+  background:var(--surface-variant); border-radius:16px;
+  padding:16px; min-height:100px; max-height:180px;
+  overflow-y:auto; margin-bottom:16px;
+}
+.voice-transcript-label {
+  font-size:11px; text-transform:uppercase; letter-spacing:.8px;
+  color:var(--on-surface-variant); margin-bottom:8px;
+  font-family:'Google Sans',sans-serif; font-weight:500;
+}
+.voice-transcript-text {
+  font-size:14px; line-height:1.7; color:var(--on-surface);
+}
+.voice-transcript-text.empty { color:var(--on-surface-variant); font-style:italic; }
+.voice-stop-btn {
+  width:100%; height:48px; border-radius:24px;
+  background:var(--error); color:#fff; border:none;
+  font-family:'Google Sans',sans-serif; font-size:15px; font-weight:500;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+#voice-finalizing { text-align:center; padding:56px 24px; }
+
 /* PROGRESS */
 #progress-bar { position:fixed; top:0; left:0; right:0; height:3px; z-index:9999; background:var(--outline-variant); display:none; }
 #progress-bar.visible { display:block; }
@@ -383,6 +474,19 @@ body {
 
     <!-- CAPTURE -->
     <div class="view active" id="view-capture">
+      <!-- MODE SWITCH -->
+      <div class="capture-mode-switch" id="capture-mode-switch">
+        <button class="mode-btn active" id="mode-photo-btn" onclick="switchCaptureMode('photo')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Photo
+        </button>
+        <button class="mode-btn" id="mode-voice-btn" onclick="switchCaptureMode('voice')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          Voice
+        </button>
+      </div>
+
+      <!-- PHOTO MODE -->
       <div id="capture-idle">
         <div class="upload-zone">
           <div class="upload-icon">
@@ -403,6 +507,47 @@ body {
           <input type="file" id="input-camera" accept="image/*" capture="environment" hidden onchange="handleFiles(event)">
           <input type="file" id="input-files" accept="image/*" multiple hidden onchange="handleFiles(event)">
         </div>
+      </div>
+
+      <!-- VOICE MODE: idle -->
+      <div id="voice-idle" class="hidden">
+        <button class="voice-record-btn" id="voice-record-btn" onclick="startVoiceRecording()">
+          <div class="pulse-ring"></div>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </button>
+        <div class="voice-idle-label">Tap to start recording</div>
+        <div class="voice-idle-sub">Speak naturally — AI will take notes for you</div>
+      </div>
+
+      <!-- VOICE MODE: active recording -->
+      <div id="voice-recording" class="hidden">
+        <div class="voice-rec-header">
+          <div class="voice-rec-badge">
+            <div class="rec-dot"></div>
+            <span class="rec-timer" id="voice-timer">00:00</span>
+          </div>
+          <div class="voice-pulse-chip" id="voice-pulse-chip" style="display:none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span id="voice-pulse-count">0</span> insights
+          </div>
+        </div>
+        <div class="voice-transcript-box">
+          <div class="voice-transcript-label">Live transcript</div>
+          <div class="voice-transcript-text empty" id="voice-transcript">Listening…</div>
+        </div>
+        <button class="voice-stop-btn" onclick="stopVoiceRecording()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Stop &amp; Generate Notes
+        </button>
+      </div>
+
+      <!-- VOICE MODE: finalizing -->
+      <div id="voice-finalizing" class="hidden">
+        <span class="processing-icon" style="margin-bottom:16px">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </span>
+        <div class="processing-label" id="voice-finalizing-label">Generating your notes…</div>
+        <div class="processing-sub">AI is listening to your session</div>
       </div>
 
       <div id="capture-files" class="hidden">
@@ -648,7 +793,29 @@ const S = {
   theme: 'dark',
   apiKey: '',
   sheetsOpen: 0,
+  // Voice recording state
+  captureMode: 'photo',       // 'photo' | 'voice'
+  voiceRecording: false,
 };
+
+// Voice recording engine refs (not in S — these are mutable refs not serialised state)
+const VR = {
+  recognition:     null,
+  clockInterval:   null,
+  pulseInterval:   null,
+  wakeLock:        null,
+  seconds:         0,
+  pulseCount:      0,
+  transcriptSegs:  new Map(),
+  pulseSummaries:  [],
+  lastPulsedWords: 0,
+  finalizing:      false,
+};
+
+const VOICE_PULSE_INTERVAL_MS   = 45000;
+const VOICE_MIN_WORDS_FOR_PULSE = 30;
+const wordCount = s => s.trim().split(/\s+/).filter(Boolean).length;
+const formatTime = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function safeJSON(str, fb) {
@@ -770,7 +937,7 @@ function clearFiles() {
 }
 
 function updateFAB() {
-  document.getElementById('process-btn-wrap').classList.toggle('hidden', !(S.view === 'capture' && S.files.length > 0));
+  document.getElementById('process-btn-wrap').classList.toggle('hidden', !(S.view === 'capture' && S.captureMode === 'photo' && S.files.length > 0));
 }
 
 // ── PROCESS ──────────────────────────────────────────────────────────────────
@@ -879,7 +1046,9 @@ function renderLibrary() {
   emptyEl.classList.add('hidden');
 
   listEl.innerHTML = list.map(n => {
-    const letter  = esc((n.title || '?')[0].toUpperCase());
+    const letter  = n.source === 'voice'
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>'
+      : esc((n.title || '?')[0].toUpperCase());
     const dateStr = new Date(n.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
     const snippet = esc((n.summary?.[0] || n.organized_text || '').slice(0, 160));
     const tags    = (n.tags || []).slice(0,3).map(t => '<span class="chip" data-tag="' + esc(t) + '" onclick="filterTag(event,this.dataset.tag)">' + esc(t) + '</span>').join('');
@@ -888,7 +1057,7 @@ function renderLibrary() {
       + '<div class="card-avatar">' + letter + '</div>'
       + '<div class="card-header-text">'
       + '<div class="card-title">' + esc(n.title) + '</div>'
-      + '<div class="card-meta">' + dateStr + ' · ' + n.images.length + ' page' + (n.images.length !== 1 ? 's' : '') + '</div>'
+      + '<div class="card-meta">' + dateStr + (n.source === 'voice' ? ' · ' + formatTime(n.duration || 0) + ' recording' : ' · ' + n.images.length + ' page' + (n.images.length !== 1 ? 's' : '')) + '</div>'
       + '</div></div>'
       + '<div class="card-snippet">' + snippet + '</div>'
       + '<div class="chips-row">' + tags + '</div>'
@@ -1083,6 +1252,281 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.target === this) closeLightbox();
   });
 });
+
+// ── VOICE RECORDING ──────────────────────────────────────────────────────────
+function switchCaptureMode(mode) {
+  S.captureMode = mode;
+  document.getElementById('mode-photo-btn').classList.toggle('active', mode === 'photo');
+  document.getElementById('mode-voice-btn').classList.toggle('active', mode === 'voice');
+  // Show/hide the right panels
+  hide('capture-idle',   mode !== 'photo');
+  hide('capture-files',  true);
+  hide('capture-error',  true);
+  hide('voice-idle',     mode !== 'voice');
+  hide('voice-recording',    true);
+  hide('voice-finalizing',   true);
+  // Process button is photo-only
+  updateFAB();
+}
+
+function voiceGetTranscript() {
+  return Array.from(VR.transcriptSegs.values()).join(' ');
+}
+
+async function voiceRunPulse(isFinal) {
+  const transcript = voiceGetTranscript();
+  const currentWords = wordCount(transcript);
+  const newWords = currentWords - VR.lastPulsedWords;
+
+  if (!isFinal && newWords < VOICE_MIN_WORDS_FOR_PULSE) return;
+  if (!S.apiKey) return;
+
+  const chunk = isFinal
+    ? transcript
+    : transcript.split(' ').slice(VR.lastPulsedWords).join(' ');
+  if (!chunk.trim()) return;
+
+  try {
+    const res = await fetch(API_URL(S.apiKey), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text:
+        `You are taking notes on a live session — a lecture, sermon, meeting, or talk. From this speech segment, extract only the ideas worth writing down: key points, notable statements, names, references, or anything the speaker clearly emphasized. Skip filler, repetition, and tangents. If nothing is worth noting, respond with exactly "SKIP".
+
+Speech segment:
+"${chunk}"
+
+Respond with 1-3 short bullet points only. Each bullet should read like a real person's handwritten note — terse, clear, no fluff. No preamble.`
+      }] }] })
+    });
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (text && !text.includes('SKIP')) {
+      VR.pulseSummaries.push(text);
+      VR.pulseCount++;
+      if (!isFinal) VR.lastPulsedWords = currentWords;
+      // Update chip
+      document.getElementById('voice-pulse-count').textContent = VR.pulseCount;
+      document.getElementById('voice-pulse-chip').style.display = 'flex';
+    }
+  } catch(e) {
+    console.warn('[Voice] pulse failed:', e.message);
+  }
+}
+
+function startVoiceSpeechRecognition() {
+  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Speech) { snack('Speech recognition not supported in this browser'); return false; }
+
+  const rec = new Speech();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = 'en-US';
+
+  rec.onresult = e => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) VR.transcriptSegs.set(i, e.results[i][0].transcript);
+    }
+    const full = voiceGetTranscript();
+    const preview = full.length > 300 ? '…' + full.slice(-300) : full;
+    const el = document.getElementById('voice-transcript');
+    el.textContent = preview || 'Listening…';
+    el.classList.toggle('empty', !preview);
+  };
+
+  rec.onerror = e => {
+    if (e.error === 'no-speech' || e.error === 'network') {
+      setTimeout(() => {
+        if (VR.recognition && !VR.finalizing) try { VR.recognition.start(); } catch {}
+      }, 500);
+    }
+  };
+
+  rec.onend = () => {
+    if (!VR.finalizing) setTimeout(() => { try { rec.start(); } catch {} }, 300);
+  };
+
+  VR.recognition = rec;
+  try { rec.start(); return true; } catch(e) { return false; }
+}
+
+async function startVoiceRecording() {
+  if (!S.apiKey) { switchView('settings'); snack('Add your API key in Settings first'); return; }
+
+  // Request mic
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    snack('Microphone access denied'); return;
+  }
+
+  // Wake lock
+  if ('wakeLock' in navigator) {
+    try { VR.wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+  }
+
+  // Reset state
+  VR.transcriptSegs.clear();
+  VR.pulseSummaries  = [];
+  VR.lastPulsedWords = 0;
+  VR.pulseCount      = 0;
+  VR.seconds         = 0;
+  VR.finalizing      = false;
+
+  S.voiceRecording = true;
+  document.getElementById('voice-pulse-chip').style.display = 'none';
+  document.getElementById('voice-transcript').textContent = 'Listening…';
+  document.getElementById('voice-transcript').classList.add('empty');
+
+  // Switch UI
+  hide('voice-idle',      true);
+  hide('voice-recording', false);
+  document.getElementById('capture-mode-switch').style.pointerEvents = 'none';
+  document.getElementById('progress-bar').classList.add('visible');
+
+  // Start speech recognition
+  startVoiceSpeechRecognition();
+
+  // Clock
+  VR.clockInterval = setInterval(() => {
+    VR.seconds++;
+    document.getElementById('voice-timer').textContent = formatTime(VR.seconds);
+  }, 1000);
+
+  // Pulse timer
+  VR.pulseInterval = setInterval(() => voiceRunPulse(false), VOICE_PULSE_INTERVAL_MS);
+}
+
+async function stopVoiceRecording() {
+  if (!S.voiceRecording) return;
+  VR.finalizing = true;
+  S.voiceRecording = false;
+
+  // Stop everything
+  if (VR.recognition)   { try { VR.recognition.stop(); } catch {} VR.recognition = null; }
+  if (VR.wakeLock)      { try { await VR.wakeLock.release(); } catch {} VR.wakeLock = null; }
+  clearInterval(VR.clockInterval);
+  clearInterval(VR.pulseInterval);
+
+  // Show finalizing state
+  hide('voice-recording',  true);
+  hide('voice-finalizing', false);
+  document.getElementById('capture-mode-switch').style.pointerEvents = '';
+
+  // Give speech recognition a moment to flush last segment
+  await new Promise(r => setTimeout(r, 1200));
+
+  const transcript = voiceGetTranscript();
+  const label = document.getElementById('voice-finalizing-label');
+
+  try {
+    // Final pulse
+    label.textContent = 'Extracting key points…';
+    await voiceRunPulse(true);
+
+    // Synthesize
+    label.textContent = 'Writing your notes…';
+    const pulseContext = VR.pulseSummaries.join('\n\n');
+
+    const prompt = `You are summarizing a recorded session — a lecture, sermon, meeting, or talk — into compact notes, the way a sharp student would write them by hand.
+
+${pulseContext ? `NOTES CAPTURED DURING SESSION:\n${pulseContext}\n\n` : ''}${transcript ? `FULL TRANSCRIPT:\n${transcript}` : '(No transcript available — use captured notes only)'}
+
+Write notes that a person could read in 2 minutes and walk away knowing what the session was about. What were the 3-5 things that actually mattered? What was the main idea? Was anything actionable or memorable said?
+
+Rules:
+- No padding, no filler, no "In this session..." openers
+- Use short bullet points, not paragraphs
+- Group under 2-3 brief headings at most (e.g. ## Main Points, ## To Do, ## Worth Remembering)
+- If something was only mentioned in passing, leave it out
+- The entire summary should fit comfortably on one screen
+
+Return ONLY a valid JSON object — no markdown fences, no extra text:
+{
+  "title": "short specific title of what this session was about — max 7 words",
+  "organized_text": "the compact notes in markdown — short bullets under brief headings",
+  "summary": ["key point 1", "key point 2", "key point 3"],
+  "tags": ["tag1", "tag2", "tag3"]
+}`;
+
+    const res = await fetch(API_URL(S.apiKey), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' }
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    let str = (data.candidates?.[0]?.content?.parts?.[0]?.text || '')
+      .replace(/```json\s*/gi,'').replace(/```\s*/g,'');
+    const i0 = str.indexOf('{'), i1 = str.lastIndexOf('}');
+    if (i0 === -1 || i1 === -1) throw new Error('AI returned invalid JSON');
+    str = str.slice(i0, i1+1).replace(/,(\s*[}\]])/g,'$1');
+    const p = JSON.parse(str);
+
+    const toArr = v => Array.isArray(v) ? v : (v ? String(v).split('\n').filter(Boolean) : []);
+
+    const note = {
+      id: Date.now(),
+      title:          String(p.title || 'Voice Note').trim(),
+      transcription:  transcript,           // raw transcript stored as transcription
+      organized_text: String(p.organized_text || pulseContext || '').trim(),
+      summary:        toArr(p.summary),
+      tags:           toArr(p.tags),
+      confidence_notes: '',
+      images:         [],                   // no images for voice notes
+      source:         'voice',              // mark as voice note
+      duration:       VR.seconds,
+      created_at:     new Date().toISOString(),
+      updated_at:     new Date().toISOString(),
+    };
+
+    S.notes.unshift(note);
+    persist();
+    label.textContent = 'Done!';
+
+    // Reset voice UI back to idle
+    setTimeout(() => {
+      hide('voice-finalizing', true);
+      hide('voice-idle',       false);
+      document.getElementById('progress-bar').classList.remove('visible');
+      VR.finalizing = false;
+      switchView('library');
+      snack('Note saved');
+    }, 600);
+
+  } catch(err) {
+    console.error('[Voice]', err);
+    // Salvage: save raw transcript as note
+    if (transcript) {
+      const note = {
+        id: Date.now(),
+        title: 'Voice Note',
+        transcription: transcript,
+        organized_text: transcript,
+        summary: [],
+        tags: [],
+        confidence_notes: 'AI synthesis failed — raw transcript saved.',
+        images: [],
+        source: 'voice',
+        duration: VR.seconds,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      S.notes.unshift(note);
+      persist();
+    }
+    document.getElementById('progress-bar').classList.remove('visible');
+    hide('voice-finalizing', true);
+    hide('voice-idle',       false);
+    VR.finalizing = false;
+    snack(err.message || 'Something went wrong');
+  }
+}
 
 // ── MARKDOWN RENDERER ────────────────────────────────────────────────────────
 // Lightweight md→HTML: handles headings, bold, italic, code, lists, blockquotes, hr
