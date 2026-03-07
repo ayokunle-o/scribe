@@ -273,6 +273,68 @@ body {
 #detail-title-input:focus { border-bottom-color:var(--primary); }
 .detail-meta { font-size:12px; color:var(--on-surface-variant); margin:6px 0 16px; }
 .detail-textarea { width:100%; min-height:200px; padding:0; border:none; background:transparent; color:var(--on-surface); font-family:'Roboto',sans-serif; font-size:15px; line-height:1.7; outline:none; resize:none; border-bottom:1px solid var(--outline-variant); margin-bottom:8px; transition:border-color .2s; }
+
+/* ── PROSE RENDERED VIEW ── */
+.prose-view {
+  font-family:'Roboto',sans-serif;
+  font-size:15px; line-height:1.75;
+  color:var(--on-surface);
+  padding-bottom:4px;
+}
+.prose-view:empty::before {
+  content:'Nothing here yet.';
+  color:var(--on-surface-variant); font-style:italic;
+}
+.prose-view h1 {
+  font-family:'Google Sans Display',sans-serif;
+  font-size:22px; font-weight:500; line-height:1.3;
+  color:var(--on-surface); margin:0 0 12px;
+  padding-bottom:8px; border-bottom:1px solid var(--outline-variant);
+}
+.prose-view h2 {
+  font-family:'Google Sans',sans-serif;
+  font-size:17px; font-weight:500; line-height:1.35;
+  color:var(--on-surface); margin:20px 0 8px;
+}
+.prose-view h3 {
+  font-family:'Google Sans',sans-serif;
+  font-size:15px; font-weight:500; line-height:1.4;
+  color:var(--primary); margin:16px 0 6px;
+}
+.prose-view p {
+  margin:0 0 12px; color:var(--on-surface);
+}
+.prose-view p:last-child { margin-bottom:0; }
+.prose-view strong { font-weight:500; color:var(--on-surface); }
+.prose-view em { font-style:italic; color:var(--on-surface-variant); }
+.prose-view ul, .prose-view ol {
+  margin:0 0 12px; padding-left:20px;
+}
+.prose-view li {
+  margin-bottom:6px; line-height:1.65;
+}
+.prose-view li::marker { color:var(--primary); }
+.prose-view ol li::marker { color:var(--primary); font-weight:500; }
+.prose-view blockquote {
+  margin:12px 0; padding:10px 16px;
+  border-left:3px solid var(--primary);
+  background:var(--primary-container); border-radius:0 8px 8px 0;
+  color:var(--on-surface-variant); font-style:italic;
+}
+.prose-view code {
+  font-family:monospace; font-size:13px;
+  background:var(--surface-variant); color:var(--primary);
+  padding:1px 5px; border-radius:4px;
+}
+.prose-view hr {
+  border:none; border-top:1px solid var(--outline-variant); margin:16px 0;
+}
+.prose-view .prose-label {
+  display:inline-block; font-family:'Google Sans',sans-serif;
+  font-size:11px; font-weight:500; letter-spacing:.6px; text-transform:uppercase;
+  color:var(--primary); background:var(--primary-container);
+  padding:2px 8px; border-radius:4px; margin-bottom:8px;
+}
 .detail-textarea:focus { border-bottom-color:var(--primary); }
 .detail-text-raw { white-space:pre-wrap; font-family:monospace; font-size:13px; color:var(--on-surface-variant); line-height:1.7; }
 .detail-summary { padding-left:20px; }
@@ -487,7 +549,14 @@ body {
       <button class="md-tab" data-tab="summary">🗝️ Summary</button>
     </div>
     <div class="tab-pane active" id="pane-organized">
-      <textarea class="detail-textarea" id="detail-organized" rows="8"></textarea>
+      <div id="organized-view" class="prose-view"></div>
+      <textarea class="detail-textarea hidden" id="detail-organized" rows="12" placeholder="Organized text…"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="btn-text" id="edit-toggle-btn" onclick="toggleEditMode()" style="font-size:13px;color:var(--on-surface-variant)">
+          <svg id="edit-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span id="edit-toggle-label">Edit</span>
+        </button>
+      </div>
     </div>
     <div class="tab-pane" id="pane-raw">
       <p class="detail-text-raw" id="detail-raw"></p>
@@ -704,7 +773,7 @@ Return ONLY a valid JSON object — no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
   "transcription": "raw handwriting as clean digital text preserving original structure",
-  "organized_text": "logically reorganized version with grammar corrected and ideas grouped",
+  "organized_text": "a well-formatted markdown version — use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate.",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
@@ -850,6 +919,10 @@ function openNote(id) {
   if (note.confidence_notes) { conf.textContent = '⚠️ ' + note.confidence_notes; conf.classList.remove('hidden'); }
   else { conf.classList.add('hidden'); }
 
+  // Always open in view mode
+  setEditMode(false);
+  renderOrganizedView(note.organized_text || '');
+
   switchTab('organized');
   openSheet('detail-sheet');
 }
@@ -873,6 +946,9 @@ function saveDetailEdits() {
   S.notes[idx].organized_text = document.getElementById('detail-organized').value;
   S.notes[idx].updated_at    = new Date().toISOString();
   S.originalText = S.notes[idx].organized_text;
+  // Re-render view and switch back to view mode
+  renderOrganizedView(S.notes[idx].organized_text);
+  setEditMode(false);
   persist(); renderLibrary(); snack('Changes saved ✓');
 }
 
@@ -996,8 +1072,107 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// ── MARKDOWN RENDERER ────────────────────────────────────────────────────────
+// Lightweight md→HTML: handles headings, bold, italic, code, lists, blockquotes, hr
+function mdToHtml(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  const out = [];
+  let inUl = false, inOl = false;
+
+  function closeList() {
+    if (inUl) { out.push('</ul>'); inUl = false; }
+    if (inOl) { out.push('</ol>'); inOl = false; }
+  }
+
+  function inlineFormat(s) {
+    // Escape HTML first, then apply inline markdown
+    s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    s = s.replace(/_(.+?)_/g, '<em>$1</em>');
+    s = s.replace(/`(.+?)`/g, '<code>$1</code>');
+    return s;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) { closeList(); out.push('<br>'); continue; }
+
+    // Headings
+    if (/^### /.test(trimmed)) { closeList(); out.push('<h3>' + inlineFormat(trimmed.slice(4)) + '</h3>'); continue; }
+    if (/^## /.test(trimmed))  { closeList(); out.push('<h2>' + inlineFormat(trimmed.slice(3)) + '</h2>'); continue; }
+    if (/^# /.test(trimmed))   { closeList(); out.push('<h1>' + inlineFormat(trimmed.slice(2)) + '</h1>'); continue; }
+
+    // Horizontal rule
+    if (/^(-{3,}|_{3,}|\*{3,})$/.test(trimmed)) { closeList(); out.push('<hr>'); continue; }
+
+    // Blockquote
+    if (/^> /.test(trimmed)) { closeList(); out.push('<blockquote>' + inlineFormat(trimmed.slice(2)) + '</blockquote>'); continue; }
+
+    // Unordered list
+    if (/^[-*+] /.test(trimmed)) {
+      if (inOl) { out.push('</ol>'); inOl = false; }
+      if (!inUl) { out.push('<ul>'); inUl = true; }
+      out.push('<li>' + inlineFormat(trimmed.slice(2)) + '</li>');
+      continue;
+    }
+
+    // Ordered list
+    const olMatch = trimmed.match(/^(\d+)\. (.+)/);
+    if (olMatch) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      if (!inOl) { out.push('<ol>'); inOl = true; }
+      out.push('<li>' + inlineFormat(olMatch[2]) + '</li>');
+      continue;
+    }
+
+    // Regular paragraph
+    closeList();
+    out.push('<p>' + inlineFormat(trimmed) + '</p>');
+  }
+
+  closeList();
+  // Collapse multiple consecutive <br> into one
+  return out.join('\n').replace(/(<br>\s*){2,}/g, '<br>').replace(/^<br>|<br>$/g,'');
+}
+
+function renderOrganizedView(text) {
+  document.getElementById('organized-view').innerHTML = mdToHtml(text);
+}
+
+// ── EDIT MODE TOGGLE ──────────────────────────────────────────────────────────
+let _editMode = false;
+
+function setEditMode(on) {
+  _editMode = on;
+  document.getElementById('organized-view').classList.toggle('hidden', on);
+  document.getElementById('detail-organized').classList.toggle('hidden', !on);
+  document.getElementById('edit-toggle-label').textContent = on ? 'Preview' : 'Edit';
+  // Swap icon: pencil → eye
+  document.getElementById('edit-toggle-icon').innerHTML = on
+    ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'  // eye
+    : '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'; // pencil
+}
+
+function toggleEditMode() {
+  if (_editMode) {
+    // Switching from edit → preview: re-render with current textarea content
+    renderOrganizedView(document.getElementById('detail-organized').value);
+    setEditMode(false);
+  } else {
+    setEditMode(true);
+    // Focus textarea at end
+    const ta = document.getElementById('detail-organized');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  }
+}
+
 // Expose state for debugging / testing
-window._NS = { get S() { return S; }, safeJSON, esc };
+window._NS = { get S() { return S; }, safeJSON, esc, mdToHtml };
 </script>
 </body>
 </html>
