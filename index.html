@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NoteSnap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --md-sys-color-primary: #cc785c;
+  --md-sys-color-primary-hover: #d4956a;
+  --md-sys-color-primary-container: rgba(204,120,92,0.15);
+  --md-sys-color-bg: #111318;
+  --md-sys-color-surface: #1d1f27;
+  --md-sys-color-surface-variant: #252836;
+  --md-sys-color-surface-container: #1a1c24;
+  --md-sys-color-on-surface: #e4e1dc;
+  --md-sys-color-on-surface-variant: #9e9b95;
+  --md-sys-color-outline: #3a3d4a;
+  --md-sys-color-outline-variant: #2a2d38;
+  --md-sys-color-error: #f2736a;
+  --md-sys-color-scrim: rgba(0,0,0,0.6);
+  --md-sys-color-tag-bg: rgba(204,120,92,0.18);
+  --md-shape-xs: 4px;
+  --md-shape-sm: 8px;
+  --md-shape-md: 12px;
+  --md-shape-lg: 16px;
+  --md-shape-xl: 28px;
+  --md-shape-full: 50px;
+  --md-elevation-1: 0 1px 2px rgba(0,0,0,0.45), 0 1px 3px 1px rgba(0,0,0,0.3);
+  --md-elevation-2: 0 1px 2px rgba(0,0,0,0.45), 0 2px 6px 2px rgba(0,0,0,0.3);
+  --md-elevation-3: 0 4px 8px 3px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.45);
+  --md-motion-emphasized: cubic-bezier(0.2,0,0,1.0);
+  --md-motion-decelerate: cubic-bezier(0.05,0.7,0.1,1.0);
+  --md-motion-accelerate: cubic-bezier(0.3,0.0,0.8,0.15);
+  --md-motion-standard: cubic-bezier(0.2,0,0,1.0);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme="light"] {
+  --md-sys-color-bg: #faf8f5;
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-surface-variant: #f2ede8;
+  --md-sys-color-surface-container: #f7f3ef;
+  --md-sys-color-on-surface: #1d1b18;
+  --md-sys-color-on-surface-variant: #6b6660;
+  --md-sys-color-outline: #cac5bf;
+  --md-sys-color-outline-variant: #e0dbd4;
+  --md-elevation-1: 0 1px 2px rgba(0,0,0,0.12), 0 1px 3px 1px rgba(0,0,0,0.08);
+  --md-elevation-2: 0 1px 2px rgba(0,0,0,0.12), 0 2px 6px 2px rgba(0,0,0,0.08);
+  --md-elevation-3: 0 4px 8px 3px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12);
+  --md-sys-color-scrim: rgba(0,0,0,0.4);
+  --md-sys-color-tag-bg: rgba(204,120,92,0.12);
+}
+
+*,*::before,*::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  margin: 0; padding: 0;
+  font-family: 'Roboto', sans-serif;
+  background: var(--md-sys-color-bg);
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.5;
+  overflow: hidden;
+  height: 100dvh;
+  transition: background 0.3s var(--md-motion-standard), color 0.3s var(--md-motion-standard);
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── TOP APP BAR ── */
+.app-bar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--md-sys-color-bg);
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: box-shadow 0.2s var(--md-motion-standard);
+}
+.app-bar.scrolled { box-shadow: var(--md-elevation-2); }
+.app-bar-title {
+  font-family: 'Google Sans Display', sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+  letter-spacing: 0.3px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.app-bar-actions { display: flex; gap: 4px; align-items: center; margin-left: auto; }
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--md-shape-full);
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.2s;
+}
+.icon-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: currentColor;
+  opacity: 0;
+  border-radius: inherit;
+  transition: opacity 0.2s;
+}
+.icon-btn:hover::before { opacity: 0.08; }
+.icon-btn:active::before { opacity: 0.12; }
+
+/* ── VIEWS ── */
+.views-wrapper { flex: 1; overflow: hidden; position: relative; }
+.view {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  padding: 8px 16px calc(88px + var(--safe-bottom));
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.25s var(--md-motion-standard), transform 0.25s var(--md-motion-standard);
+  -webkit-overflow-scrolling: touch;
+}
+.view.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: calc(72px + var(--safe-bottom));
+  background: var(--md-sys-color-surface);
+  box-shadow: var(--md-elevation-2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding-top: 12px;
+  padding-bottom: var(--safe-bottom);
+  z-index: 20;
+  flex-shrink: 0;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; cursor: pointer; flex: 1;
+  font-family: 'Google Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  transition: color 0.2s;
+  position: relative;
+}
+.nav-item.active { color: var(--md-sys-color-primary); }
+.nav-indicator {
+  width: 64px; height: 32px;
+  border-radius: 16px;
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s var(--md-motion-standard);
+  position: relative;
+  overflow: hidden;
+}
+.nav-item.active .nav-indicator { background: var(--md-sys-color-primary-container); }
+.nav-indicator svg { width: 24px; height: 24px; transition: transform 0.2s var(--md-motion-decelerate); }
+.nav-item.active .nav-indicator svg { transform: scale(1.08); }
+
+/* ── CARDS ── */
+.note-card {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-lg);
+  padding: 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.note-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--md-sys-color-primary);
+  opacity: 0; transition: opacity 0.2s; border-radius: inherit;
+}
+.note-card:hover::before { opacity: 0.05; }
+.note-card:active::before { opacity: 0.1; }
+.note-card:hover { box-shadow: var(--md-elevation-1); }
+
+.card-avatar {
+  width: 36px; height: 36px; border-radius: var(--md-shape-full);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-primary);
+  font-family: 'Google Sans', sans-serif;
+  font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.card-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+.card-header-text { flex: 1; min-width: 0; }
+.card-title {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 16px; font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 2px 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-meta {
+  font-size: 12px; color: var(--md-sys-color-on-surface-variant);
+  font-family: 'Roboto', sans-serif;
+}
+.card-snippet {
+  font-size: 14px; color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 12px; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ── CHIPS / TAGS ── */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 32px; padding: 0 12px;
+  border-radius: var(--md-shape-sm);
+  border: 1px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  font-family: 'Google Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.chip:hover { background: var(--md-sys-color-tag-bg); }
+.chip.active { background: var(--md-sys-color-tag-bg); border-color: var(--md-sys-color-primary); }
+.chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── BUTTONS ── */
+.btn-filled {
+  height: 40px; padding: 0 24px;
+  border-radius: var(--md-shape-full);
+  border: none; background: var(--md-sys-color-primary);
+  color: white; font-family: 'Google Sans', sans-serif;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.1px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  position: relative; overflow: hidden;
+  transition: box-shadow 0.2s, opacity 0.2s;
+}
+.btn-filled::before {
+  content: ''; position: absolute; inset: 0;
+  background: white; opacity: 0; transition: opacity 0.2s; border-radius: inherit;
+}
+.btn-filled:hover::before { opacity: 0.08; }
+.btn-filled:active::before { opacity: 0.14; }
+.btn-filled:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-outlined {
+  height: 40px; padding: 0 24px;
+  border-radius: var(--md-shape-full);
+  border: 1px solid var(--md-sys-color-outline);
+  background: transparent; color: var(--md-sys-color-primary);
+  font-family: 'Google Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.btn-outlined::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--md-sys-color-primary); opacity: 0; transition: opacity 0.2s;
+}
+.btn-outlined:hover::before { opacity: 0.08; }
+.btn-outlined:active::before { opacity: 0.12; }
+
+.btn-text {
+  height: 36px; padding: 0 12px;
+  border-radius: var(--md-shape-full);
+  border: none; background: transparent;
+  color: var(--md-sys-color-primary);
+  font-family: 'Google Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  position: relative; overflow: hidden;
+  transition: color 0.2s;
+}
+.btn-text::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--md-sys-color-primary); opacity: 0; transition: opacity 0.2s;
+  border-radius: inherit;
+}
+.btn-text:hover::before { opacity: 0.08; }
+.btn-text:active::before { opacity: 0.12; }
+
+.btn-danger {
+  background: var(--md-sys-color-error) !important;
+  border-color: var(--md-sys-color-error) !important;
+  color: white !important;
+}
+
+/* ── FAB ── */
+.fab {
+  position: absolute;
+  bottom: calc(88px + var(--safe-bottom) + 16px);
+  right: 16px;
+  width: 56px; height: 56px;
+  border-radius: var(--md-shape-xl);
+  background: var(--md-sys-color-primary);
+  color: white; border: none;
+  box-shadow: var(--md-elevation-3);
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px;
+  font-family: 'Google Sans', sans-serif;
+  font-size: 10px; font-weight: 500;
+  z-index: 15;
+  position: fixed;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s var(--md-motion-decelerate);
+}
+.fab:hover { box-shadow: var(--md-elevation-3), 0 0 0 4px rgba(204,120,92,0.15); transform: translateY(-1px); }
+.fab:active { transform: scale(0.96); }
+.fab::before {
+  content: ''; position: absolute; inset: 0;
+  background: white; opacity: 0; transition: opacity 0.2s;
+}
+.fab:hover::before { opacity: 0.08; }
+.fab-icon { font-size: 22px; line-height: 1; }
+.fab.hidden { transform: translateY(80px) scale(0.8); pointer-events: none; opacity: 0; }
+
+/* ── INPUTS ── */
+.md-field {
+  position: relative; margin-bottom: 20px;
+}
+.md-field input, .md-field textarea {
+  width: 100%; padding: 20px 16px 8px;
+  background: var(--md-sys-color-surface-variant);
+  border: none; border-bottom: 1px solid var(--md-sys-color-outline);
+  border-radius: 4px 4px 0 0;
+  color: var(--md-sys-color-on-surface);
+  font-family: 'Roboto', sans-serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: none;
+}
+.md-field textarea { padding-top: 24px; min-height: 120px; }
+.md-field input:focus, .md-field textarea:focus { border-bottom: 2px solid var(--md-sys-color-primary); }
+.md-field label {
+  position: absolute; left: 16px; top: 14px;
+  font-family: 'Roboto', sans-serif; font-size: 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  pointer-events: none;
+  transition: top 0.15s, font-size 0.15s, color 0.15s;
+}
+.md-field input:focus ~ label,
+.md-field input:not(:placeholder-shown) ~ label,
+.md-field textarea:focus ~ label,
+.md-field textarea:not(:placeholder-shown) ~ label {
+  top: 6px; font-size: 12px; color: var(--md-sys-color-primary);
+}
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  height: 52px; padding: 0 16px;
+  background: var(--md-sys-color-surface);
+  border-radius: 26px;
+  box-shadow: var(--md-elevation-1);
+  margin-bottom: 16px;
+  position: sticky; top: 0; z-index: 5;
+}
+.search-bar svg { flex-shrink: 0; color: var(--md-sys-color-on-surface-variant); }
+.search-bar input {
+  flex: 1; border: none; background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: 'Roboto', sans-serif; font-size: 16px;
+  outline: none;
+}
+.search-bar input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+.search-clear {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer; display: none; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.search-clear.visible { display: flex; }
+
+/* ── PROGRESS BAR ── */
+.progress-bar-linear {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 3px; z-index: 9999;
+  background: var(--md-sys-color-outline-variant);
+  display: none;
+}
+.progress-bar-linear.visible { display: block; }
+.progress-bar-fill {
+  height: 100%; background: var(--md-sys-color-primary);
+  border-radius: 0 2px 2px 0;
+  animation: indeterminate 1.8s ease-in-out infinite;
+  transform-origin: left;
+}
+@keyframes indeterminate {
+  0% { transform: scaleX(0); margin-left: 0; }
+  50% { transform: scaleX(0.5); margin-left: 20%; }
+  100% { transform: scaleX(0); margin-left: 100%; }
+}
+
+/* ── CAPTURE VIEW ── */
+.upload-zone {
+  border: 2px dashed var(--md-sys-color-outline);
+  border-radius: var(--md-shape-xl);
+  padding: 36px 24px;
+  text-align: center;
+  margin-bottom: 16px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.upload-zone.drag-over { border-color: var(--md-sys-color-primary); background: var(--md-sys-color-primary-container); }
+.upload-icon {
+  width: 56px; height: 56px; margin: 0 auto 16px;
+  background: var(--md-sys-color-primary-container);
+  border-radius: var(--md-shape-full);
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-icon svg { color: var(--md-sys-color-primary); }
+.upload-title { font-family: 'Google Sans', sans-serif; font-size: 18px; font-weight: 500; margin: 0 0 8px; }
+.upload-sub { font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 24px; }
+.upload-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+.previews-section { margin-bottom: 16px; }
+.previews-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.previews-header h3 { font-family: 'Google Sans', sans-serif; font-size: 14px; font-weight: 500; margin: 0; color: var(--md-sys-color-on-surface-variant); letter-spacing: 0.5px; text-transform: uppercase; }
+.previews-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+.previews-scroll::-webkit-scrollbar { display: none; }
+.preview-thumb {
+  position: relative; flex: 0 0 88px; height: 88px;
+  border-radius: var(--md-shape-md);
+  overflow: hidden;
+  box-shadow: var(--md-elevation-1);
+}
+.preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.preview-thumb .rm-btn {
+  position: absolute; top: 4px; right: 4px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,0.7); color: white;
+  border: none; font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.processing-state {
+  text-align: center; padding: 48px 24px;
+}
+.processing-icon { font-size: 48px; margin-bottom: 16px; animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:0.7} }
+.processing-label { font-family: 'Google Sans', sans-serif; font-size: 16px; font-weight: 500; color: var(--md-sys-color-primary); }
+.processing-sub { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; }
+
+.error-state {
+  background: rgba(242,115,106,0.1); border: 1px solid rgba(242,115,106,0.3);
+  border-radius: var(--md-shape-lg); padding: 16px; margin-top: 12px;
+}
+.error-title { font-family: 'Google Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--md-sys-color-error); margin-bottom: 4px; }
+.error-msg { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 12px; word-break: break-word; }
+
+/* ── LIBRARY ── */
+.lib-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.lib-count { font-size: 13px; color: var(--md-sys-color-on-surface-variant); font-family: 'Roboto', sans-serif; }
+.lib-sort { background: none; border: none; color: var(--md-sys-color-primary); font-family: 'Google Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; padding: 0; }
+
+.empty-state { text-align: center; padding: 64px 24px; }
+.empty-icon { font-size: 56px; margin-bottom: 16px; }
+.empty-title { font-family: 'Google Sans Display', sans-serif; font-size: 22px; font-weight: 400; margin: 0 0 8px; }
+.empty-sub { font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
+
+/* ── SETTINGS ── */
+.settings-section { margin-bottom: 28px; }
+.settings-label {
+  font-family: 'Google Sans', sans-serif; font-size: 12px; font-weight: 500;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--md-sys-color-primary); margin-bottom: 12px; display: block;
+}
+.settings-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  font-size: 14px;
+}
+.settings-item:last-child { border-bottom: none; }
+.storage-track { height: 4px; background: var(--md-sys-color-outline-variant); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.storage-fill { height: 100%; background: var(--md-sys-color-primary); border-radius: 2px; transition: width 0.5s var(--md-motion-decelerate); }
+
+/* ── BOTTOM SHEET ── */
+.scrim {
+  position: fixed; inset: 0;
+  background: var(--md-sys-color-scrim);
+  z-index: 100;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s var(--md-motion-standard);
+}
+.scrim.open { opacity: 1; pointer-events: all; }
+
+.bottom-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  max-width: 480px; margin: 0 auto;
+  background: var(--md-sys-color-surface);
+  border-radius: 28px 28px 0 0;
+  z-index: 101;
+  transform: translateY(100%);
+  transition: transform 0.35s var(--md-motion-decelerate);
+  max-height: 92dvh;
+  display: flex; flex-direction: column;
+}
+.bottom-sheet.open { transform: translateY(0); }
+.sheet-handle { width: 32px; height: 4px; background: var(--md-sys-color-outline); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
+.sheet-content { overflow-y: auto; padding: 16px 20px calc(24px + var(--safe-bottom)); flex: 1; }
+.sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-top: 8px; }
+.sheet-title { font-family: 'Google Sans Display', sans-serif; font-size: 22px; font-weight: 400; margin: 0; }
+
+/* ── TABS ── */
+.md-tabs { display: flex; border-bottom: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; position: relative; }
+.md-tab {
+  flex: 1; height: 48px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Google Sans', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer; position: relative; transition: color 0.2s;
+  border: none; background: none;
+  gap: 6px;
+}
+.md-tab.active { color: var(--md-sys-color-primary); }
+.md-tab::after {
+  content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+  background: var(--md-sys-color-primary);
+  transform: scaleX(0); transition: transform 0.25s var(--md-motion-emphasized);
+  border-radius: 2px 2px 0 0;
+}
+.md-tab.active::after { transform: scaleX(1); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── DETAIL SHEET ── */
+#detail-title-input {
+  font-family: 'Google Sans Display', sans-serif;
+  font-size: 22px; font-weight: 400;
+  border: none; background: transparent;
+  color: var(--md-sys-color-on-surface);
+  width: 100%; outline: none; padding: 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+#detail-title-input:focus { border-bottom-color: var(--md-sys-color-primary); }
+.detail-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 4px 0 16px; }
+.detail-text { font-size: 15px; line-height: 1.7; white-space: pre-wrap; color: var(--md-sys-color-on-surface); }
+.detail-textarea {
+  width: 100%; min-height: 200px; padding: 0; border: none;
+  background: transparent; color: var(--md-sys-color-on-surface);
+  font-family: 'Roboto', sans-serif; font-size: 15px; line-height: 1.7;
+  outline: none; resize: none;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  margin-bottom: 8px;
+}
+.detail-textarea:focus { border-bottom-color: var(--md-sys-color-primary); }
+.detail-summary li { margin-bottom: 8px; font-size: 15px; line-height: 1.6; }
+.confidence-note { font-size: 13px; font-style: italic; color: var(--md-sys-color-on-surface-variant); margin-top: 16px; padding: 12px; background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-sm); }
+.detail-images { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 12px; }
+.detail-images img { height: 80px; border-radius: var(--md-shape-sm); cursor: pointer; object-fit: cover; flex-shrink: 0; }
+.detail-images::-webkit-scrollbar { display: none; }
+.detail-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+
+/* ── SNACKBAR ── */
+#snackbar {
+  position: fixed; bottom: calc(80px + var(--safe-bottom) + 12px);
+  left: 16px; right: 16px;
+  max-width: calc(480px - 32px); margin: 0 auto;
+  background: #323232; color: white;
+  padding: 0 16px; height: 48px;
+  border-radius: 4px;
+  font-family: 'Roboto', sans-serif; font-size: 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--md-elevation-3);
+  z-index: 200;
+  transform: translateY(120%);
+  transition: transform 0.25s var(--md-motion-decelerate);
+}
+#snackbar.show { transform: translateY(0); }
+
+/* ── LIGHTBOX ── */
+#lightbox {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.96);
+  display: none; align-items: center; justify-content: center; padding: 16px;
+}
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--md-shape-sm); }
+#lightbox-close { position: absolute; top: 16px; right: 16px; }
+
+/* ── WELCOME ── */
+#welcome-screen {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--md-sys-color-bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 40px 32px;
+  transition: opacity 0.4s var(--md-motion-accelerate), transform 0.4s var(--md-motion-accelerate);
+}
+#welcome-screen.hide { opacity: 0; transform: scale(0.96); pointer-events: none; }
+.welcome-art { margin-bottom: 32px; }
+.welcome-title { font-family: 'Google Sans Display', sans-serif; font-size: 32px; font-weight: 400; color: var(--md-sys-color-primary); margin: 0 0 12px; }
+.welcome-sub { font-size: 16px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin: 0 0 40px; }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--md-sys-color-outline-variant); margin: 16px 0; }
+
+/* ── UTILS ── */
+.hidden { display: none !important; }
+.w-full { width: 100%; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.gap-8 { gap: 8px; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+
+@media (min-width: 480px) {
+  .bottom-sheet { left: 50%; transform: translateX(-50%) translateY(100%); width: 480px; }
+  .bottom-sheet.open { transform: translateX(-50%) translateY(0); }
+  #snackbar { left: 50%; transform: translateX(-50%) translateY(120%); width: calc(480px - 32px); right: auto; }
+  #snackbar.show { transform: translateX(-50%) translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar-linear" id="progress-bar"><div class="progress-bar-fill"></div></div>
+
+<div id="app">
+  <!-- App Bar -->
+  <header class="app-bar" id="app-bar">
+    <div style="width:40px"></div>
+    <span class="app-bar-title">NoteSnap</span>
+    <div class="app-bar-actions">
+      <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">
+        <span id="theme-icon-wrap"></span>
+      </button>
+      <button class="icon-btn" onclick="openSheet('sync-sheet')" title="Sync info">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Views -->
+  <div class="views-wrapper">
+
+    <!-- CAPTURE VIEW -->
+    <div class="view active" id="view-capture">
+      <div id="capture-idle">
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <h2 class="upload-title">New Note</h2>
+          <p class="upload-sub">Photograph or upload your handwritten pages</p>
+          <div class="upload-actions">
+            <button class="btn-filled" onclick="document.getElementById('input-camera').click()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Take Photo
+            </button>
+            <button class="btn-outlined" onclick="document.getElementById('input-files').click()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Files
+            </button>
+          </div>
+          <input type="file" id="input-camera" accept="image/*" capture="environment" hidden onchange="handleFiles(event)">
+          <input type="file" id="input-files" accept="image/*" multiple hidden onchange="handleFiles(event)">
+        </div>
+      </div>
+
+      <div id="preview-area" class="hidden">
+        <div class="previews-section">
+          <div class="previews-header">
+            <h3>Selected Pages</h3>
+            <button class="btn-text" style="color:var(--md-sys-color-error)" onclick="clearFiles()">Clear All</button>
+          </div>
+          <div class="previews-scroll" id="previews-scroll"></div>
+        </div>
+        <div id="capture-error" class="error-state hidden">
+          <div class="error-title">Something went wrong</div>
+          <div class="error-msg" id="error-msg-text"></div>
+          <button class="btn-filled" onclick="processNotes()">Retry</button>
+        </div>
+      </div>
+
+      <div id="processing-state" class="processing-state hidden">
+        <div class="processing-icon">✍️</div>
+        <div class="processing-label">Reading your handwriting…</div>
+        <div class="processing-sub">Gemini AI is transcribing and organizing your notes</div>
+      </div>
+    </div>
+
+    <!-- LIBRARY VIEW -->
+    <div class="view" id="view-library">
+      <div class="search-bar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-input" placeholder="Search notes…" oninput="onSearch()">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+      </div>
+      <div class="lib-meta">
+        <span class="lib-count" id="lib-count">0 notes</span>
+        <select id="sort-select" class="lib-sort" onchange="renderLibrary()" style="appearance:none;-webkit-appearance:none;">
+          <option value="newest">Newest ↓</option>
+          <option value="oldest">Oldest ↑</option>
+          <option value="alpha">A–Z</option>
+        </select>
+      </div>
+      <div id="library-empty" class="empty-state hidden">
+        <div class="empty-icon">📝</div>
+        <h3 class="empty-title">No notes yet</h3>
+        <p class="empty-sub">Capture your first handwritten note to get started</p>
+      </div>
+      <div id="library-list"></div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div class="view" id="view-settings">
+      <h2 style="font-family:'Google Sans Display';font-size:28px;font-weight:400;margin:8px 0 24px;">Settings</h2>
+
+      <div class="settings-section">
+        <span class="settings-label">API</span>
+        <div class="md-field">
+          <input type="password" id="api-key-input" placeholder=" ">
+          <label>Gemini API Key</label>
+        </div>
+        <button class="btn-filled w-full" onclick="saveApiKey()" style="margin-top:-8px;margin-bottom:12px">Save API Key</button>
+        <p style="font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-top:-12px;">
+          Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--md-sys-color-primary)">Google AI Studio</a>
+        </p>
+      </div>
+
+      <div class="settings-section">
+        <span class="settings-label">Storage</span>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span id="storage-text" style="color:var(--md-sys-color-on-surface-variant)">Calculating…</span>
+        </div>
+        <div class="storage-track"><div class="storage-fill" id="storage-bar" style="width:0%"></div></div>
+      </div>
+
+      <div class="settings-section">
+        <span class="settings-label">Data</span>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn-outlined w-full" onclick="exportNotes()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Export All Notes
+          </button>
+          <button class="btn-outlined w-full" onclick="document.getElementById('import-input').click()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>
+            Import Notes
+          </button>
+          <input type="file" id="import-input" accept=".json" hidden onchange="importNotes(event)">
+          <div class="divider"></div>
+          <button class="btn-outlined w-full btn-danger" onclick="clearAllData()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Clear All Data
+          </button>
+        </div>
+      </div>
+
+      <div style="text-align:center;color:var(--md-sys-color-on-surface-variant);font-size:12px;margin-top:32px;">
+        NoteSnap v1.0 &nbsp;·&nbsp; Powered by Gemini 2.0 Flash
+      </div>
+    </div>
+
+  </div><!-- /views-wrapper -->
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchView('capture')" id="nav-capture">
+      <div class="nav-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <span>Capture</span>
+    </div>
+    <div class="nav-item" onclick="switchView('library')" id="nav-library">
+      <div class="nav-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <span>Library</span>
+    </div>
+    <div class="nav-item" onclick="switchView('settings')" id="nav-settings">
+      <div class="nav-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <span>Settings</span>
+    </div>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- FAB -->
+<button class="fab hidden" id="fab" onclick="processNotes()" title="Process notes">
+  <span class="fab-icon">✨</span>
+  <span>Process</span>
+</button>
+
+<!-- Scrim -->
+<div class="scrim" id="scrim" onclick="closeAllSheets()"></div>
+
+<!-- NOTE DETAIL BOTTOM SHEET -->
+<div class="bottom-sheet" id="detail-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <div class="sheet-header">
+      <div class="detail-actions">
+        <button class="btn-outlined" id="btn-copy" onclick="copyOrganized()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+        <button class="btn-outlined btn-danger" id="btn-delete" onclick="deleteCurrentNote()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          Delete
+        </button>
+      </div>
+      <button class="icon-btn" onclick="handleDetailClose()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <input type="text" id="detail-title-input" placeholder="Note title…">
+    <div class="detail-meta" id="detail-meta"></div>
+
+    <div class="md-tabs">
+      <button class="md-tab active" onclick="switchTab('organized')">✨ Organized</button>
+      <button class="md-tab" onclick="switchTab('raw')">📝 Raw</button>
+      <button class="md-tab" onclick="switchTab('summary')">🗝️ Summary</button>
+    </div>
+
+    <div class="tab-pane active" id="pane-organized">
+      <textarea class="detail-textarea" id="detail-organized" rows="8"></textarea>
+    </div>
+    <div class="tab-pane" id="pane-raw">
+      <p class="detail-text" id="detail-raw" style="font-family:monospace;font-size:13px;color:var(--md-sys-color-on-surface-variant)"></p>
+    </div>
+    <div class="tab-pane" id="pane-summary">
+      <ul class="detail-summary" id="detail-summary"></ul>
+    </div>
+
+    <div class="chips-row" id="detail-tags" style="margin:16px 0 8px"></div>
+    <div id="detail-images" class="detail-images"></div>
+    <div id="detail-confidence" class="confidence-note hidden"></div>
+
+    <div style="margin-top:20px">
+      <button class="btn-filled w-full" onclick="saveDetailEdits()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC INFO SHEET -->
+<div class="bottom-sheet" id="sync-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <div class="sheet-header">
+      <h3 class="sheet-title">About Sync & Privacy</h3>
+      <button class="icon-btn" onclick="closeSheet('sync-sheet')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-size:15px;line-height:1.7;color:var(--md-sys-color-on-surface-variant)">
+      <strong style="color:var(--md-sys-color-on-surface)">🔒 Private by Design</strong><br>
+      All notes are stored locally in your browser. Nothing leaves your device.
+    </p>
+    <p style="font-size:15px;line-height:1.7;color:var(--md-sys-color-on-surface-variant)">
+      <strong style="color:var(--md-sys-color-on-surface)">📱 Multi-Device</strong><br>
+      Each device has its own independent library. To transfer notes, use <strong>Export</strong> in Settings to download a JSON file, then <strong>Import</strong> on another device.
+    </p>
+    <button class="btn-filled w-full" style="margin-top:8px" onclick="closeSheet('sync-sheet')">Got it</button>
+  </div>
+</div>
+
+<!-- WELCOME SCREEN -->
+<div id="welcome-screen">
+  <div class="welcome-art">
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="56" fill="rgba(204,120,92,0.1)" stroke="rgba(204,120,92,0.3)" stroke-width="1.5"/>
+      <rect x="32" y="28" width="56" height="68" rx="6" fill="none" stroke="#cc785c" stroke-width="2"/>
+      <line x1="44" y1="48" x2="76" y2="48" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
+      <line x1="44" y1="58" x2="68" y2="58" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
+      <line x1="44" y1="68" x2="72" y2="68" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
+      <line x1="44" y1="78" x2="60" y2="78" stroke="#cc785c" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="85" cy="82" r="16" fill="#cc785c"/>
+      <path d="M79 82l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <h1 class="welcome-title">NoteSnap</h1>
+  <p class="welcome-sub">Turn handwritten notes into organized digital text with AI — stored privately on your device.</p>
+  <button class="btn-filled" style="padding:0 32px;height:48px;font-size:16px" onclick="startApp()">Get Started</button>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button class="icon-btn" id="lightbox-close" onclick="closeLightbox()" style="color:white;position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.1)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- Snackbar -->
+<div id="snackbar"></div>
+
+<script>
+// ── SNACK TIMER (must be declared before any function that uses it) ──
+let snackTimer = null;
+
+// ── STATE ──
+const S = {
+  view: 'capture',
+  notes: [],
+  files: [],
+  currentNoteId: null,
+  originalText: '',
+  theme: 'dark',
+  apiKey: '',
+};
+
+// ── INIT ──
+(function init() {
+  S.notes = safeParseJSON(localStorage.getItem('ns_notes'), []);
+  S.theme = localStorage.getItem('ns_theme') || 'dark';
+  S.apiKey = localStorage.getItem('ns_apikey') || '';
+
+  applyTheme();
+  renderLibrary();
+  updateStorage();
+
+  if (S.apiKey) document.getElementById('api-key-input').value = S.apiKey;
+
+  const firstRun = !localStorage.getItem('ns_first_run');
+  if (firstRun) {
+    document.getElementById('welcome-screen').style.display = 'flex';
+  } else {
+    document.getElementById('welcome-screen').style.display = 'none';
+  }
+
+  // scroll-shadow on app bar
+  document.querySelectorAll('.view').forEach(v => {
+    v.addEventListener('scroll', () => {
+      document.getElementById('app-bar').classList.toggle('scrolled', v.scrollTop > 4);
+    });
+  });
+})();
+
+function startApp() {
+  localStorage.setItem('ns_first_run', '1');
+  const ws = document.getElementById('welcome-screen');
+  ws.classList.add('hide');
+  setTimeout(() => ws.style.display = 'none', 400);
+  if (!S.apiKey) {
+    switchView('settings');
+    snack('Add your Gemini API key to begin');
+  }
+}
+
+// ── NAV ──
+function switchView(v) {
+  S.view = v;
+  ['capture','library','settings'].forEach(name => {
+    document.getElementById(`view-${name}`).classList.toggle('active', name === v);
+    document.getElementById(`nav-${name}`).classList.toggle('active', name === v);
+  });
+  // Show FAB only on capture when files selected
+  updateFAB();
+  if (v === 'library') renderLibrary();
+  if (v === 'settings') updateStorage();
+}
+
+// ── FILE HANDLING ──
+function handleFiles(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      S.files.push({ id: Date.now() + Math.random(), base64: ev.target.result, mimeType: f.type || 'image/jpeg', name: f.name });
+      renderPreviews();
+    };
+    reader.readAsDataURL(f);
+  });
+  e.target.value = '';
+}
+
+function renderPreviews() {
+  const container = document.getElementById('previews-scroll');
+  container.innerHTML = '';
+  S.files.forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'preview-thumb';
+    d.innerHTML = `<img src="${f.base64}"><button class="rm-btn" onclick="removeFile(${f.id})">✕</button>`;
+    container.appendChild(d);
+  });
+  const hasFiles = S.files.length > 0;
+  document.getElementById('capture-idle').classList.toggle('hidden', hasFiles);
+  document.getElementById('preview-area').classList.toggle('hidden', !hasFiles);
+  document.getElementById('capture-error').classList.add('hidden');
+  updateFAB();
+}
+
+function removeFile(id) {
+  S.files = S.files.filter(f => f.id !== id);
+  renderPreviews();
+}
+
+function clearFiles() {
+  S.files = [];
+  renderPreviews();
+}
+
+function updateFAB() {
+  const fab = document.getElementById('fab');
+  const show = S.view === 'capture' && S.files.length > 0;
+  fab.classList.toggle('hidden', !show);
+  // position FAB properly
+  fab.style.bottom = `calc(${getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')} + 88px + 16px)`;
+  fab.style.right = '16px';
+  // center if viewport wider than 480
+  if (window.innerWidth > 480) {
+    fab.style.right = `calc(50% - 240px + 16px)`;
+  }
+}
+
+// ── AI PROCESSING ──
+async function processNotes() {
+  if (!S.apiKey) { snack('Add your API key in Settings'); switchView('settings'); return; }
+  if (!S.files.length) { snack('Select at least one image'); return; }
+
+  setProcessing(true);
+
+  const prompt = `You are a handwriting transcription assistant. Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand, or abbreviations. If multiple images are provided, treat them as consecutive pages of one note.
+
+Return ONLY a valid JSON object with exactly these fields:
+{
+  "title": "concise topic title, max 8 words",
+  "transcription": "raw handwriting converted to clean text, preserve original structure",
+  "organized_text": "logically reorganized clean version, fix unclear words using context, correct grammar",
+  "summary": ["bullet point 1", "bullet point 2", "bullet point 3"],
+  "tags": ["tag1", "tag2", "tag3"],
+  "confidence_notes": "any unclear words or sections noted here, or empty string"
+}
+
+Return raw JSON only. No markdown, no code fences, no explanation.`;
+
+  try {
+    const parts = S.files.map(f => ({
+      inlineData: { mimeType: f.mimeType, data: f.base64.split(',')[1] }
+    }));
+    parts.push({ text: prompt });
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${S.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) throw new Error('Empty response from AI');
+
+    // Robust JSON extraction — handle code fences, extra text, trailing commas
+    let jsonStr = raw;
+    // Strip markdown fences
+    jsonStr = jsonStr.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    // Find the first { and last } to extract just the JSON object
+    const firstBrace = jsonStr.indexOf('{');
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON object found in AI response');
+    jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
+    // Fix trailing commas before } or ] (common Gemini quirk)
+    jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch(parseErr) {
+      console.error('Raw AI response:', raw);
+      throw new Error('Could not parse AI response as JSON. Try again — the AI occasionally returns malformed output.');
+    }
+
+    // Normalize
+    const note = {
+      id: Date.now(),
+      title: parsed.title || 'Untitled Note',
+      transcription: parsed.transcription || '',
+      organized_text: parsed.organized_text || '',
+      summary: Array.isArray(parsed.summary) ? parsed.summary : (parsed.summary ? String(parsed.summary).split('\n').filter(Boolean) : []),
+      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+      confidence_notes: parsed.confidence_notes || '',
+      images: S.files.map(f => f.base64),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    S.notes.unshift(note);
+    persist();
+    clearFiles();
+    setProcessing(false);
+    snack('Note saved ✓');
+    switchView('library');
+
+  } catch (err) {
+    setProcessing(false);
+    const ec = document.getElementById('capture-error');
+    document.getElementById('error-msg-text').textContent = err.message;
+    ec.classList.remove('hidden');
+    console.error(err);
+  }
+}
+
+function setProcessing(on) {
+  document.getElementById('processing-state').classList.toggle('hidden', !on);
+  document.getElementById('preview-area').classList.toggle('hidden', on || !S.files.length);
+  document.getElementById('progress-bar').classList.toggle('visible', on);
+  document.getElementById('fab').style.opacity = on ? '0.4' : '1';
+  document.getElementById('fab').style.pointerEvents = on ? 'none' : 'auto';
+}
+
+// ── LIBRARY ──
+function renderLibrary() {
+  const search = (document.getElementById('search-input').value || '').toLowerCase();
+  const sort = document.getElementById('sort-select').value;
+
+  let list = S.notes.filter(n =>
+    n.title.toLowerCase().includes(search) ||
+    (n.organized_text || '').toLowerCase().includes(search) ||
+    n.tags.some(t => t.toLowerCase().includes(search))
+  );
+
+  if (sort === 'newest') list.sort((a,b) => b.id - a.id);
+  else if (sort === 'oldest') list.sort((a,b) => a.id - b.id);
+  else list.sort((a,b) => a.title.localeCompare(b.title));
+
+  const el = document.getElementById('library-list');
+  const empty = document.getElementById('library-empty');
+  document.getElementById('lib-count').textContent = `${list.length} note${list.length !== 1 ? 's' : ''}`;
+
+  if (!list.length) { el.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  el.innerHTML = list.map(n => {
+    const letter = (n.title || '?')[0].toUpperCase();
+    const date = new Date(n.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    const snippet = n.summary?.[0] || n.organized_text || '';
+    const tags = n.tags.slice(0,2).map(t => `<span class="chip" style="height:24px;font-size:11px;padding:0 8px" onclick="filterTag(event,'${t}')">${t}</span>`).join('');
+    return `<div class="note-card" onclick="openNote(${n.id})">
+      <div class="card-header">
+        <div class="card-avatar">${letter}</div>
+        <div class="card-header-text">
+          <div class="card-title">${n.title}</div>
+          <div class="card-meta">${date} · ${n.images.length} page${n.images.length !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <div class="card-snippet">${snippet}</div>
+      <div class="chips-row">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+function onSearch() {
+  const val = document.getElementById('search-input').value;
+  document.getElementById('search-clear').classList.toggle('visible', val.length > 0);
+  renderLibrary();
+}
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  renderLibrary();
+}
+function filterTag(e, tag) {
+  e.stopPropagation();
+  document.getElementById('search-input').value = tag;
+  document.getElementById('search-clear').classList.add('visible');
+  switchView('library');
+  renderLibrary();
+}
+
+// ── NOTE DETAIL ──
+function openNote(id) {
+  const note = S.notes.find(n => n.id === id);
+  if (!note) return;
+  S.currentNoteId = id;
+  S.originalText = note.organized_text;
+
+  document.getElementById('detail-title-input').value = note.title;
+  document.getElementById('detail-meta').textContent = new Date(note.created_at).toLocaleString();
+  document.getElementById('detail-organized').value = note.organized_text;
+  document.getElementById('detail-raw').textContent = note.transcription;
+  document.getElementById('detail-summary').innerHTML = (note.summary || []).map(s => `<li>${s}</li>`).join('');
+  document.getElementById('detail-tags').innerHTML = (note.tags || []).map(t => `<span class="chip">${t}</span>`).join('');
+  document.getElementById('detail-images').innerHTML = (note.images || []).map(src => `<img src="${src}" onclick="openLightbox('${src}')">`).join('');
+
+  const conf = document.getElementById('detail-confidence');
+  if (note.confidence_notes) {
+    conf.textContent = '⚠️ ' + note.confidence_notes;
+    conf.classList.remove('hidden');
+  } else { conf.classList.add('hidden'); }
+
+  switchTab('organized');
+  openSheet('detail-sheet');
+}
+
+function handleDetailClose() {
+  const cur = document.getElementById('detail-organized').value;
+  if (cur !== S.originalText) {
+    if (!confirm('You have unsaved changes. Leave without saving?')) return;
+  }
+  closeSheet('detail-sheet');
+}
+
+function switchTab(name) {
+  ['organized','raw','summary'].forEach(t => {
+    document.getElementById(`pane-${t}`).classList.toggle('active', t === name);
+    document.querySelectorAll('.md-tab').forEach((el,i) => {
+      const names = ['organized','raw','summary'];
+      el.classList.toggle('active', names[i] === name);
+    });
+  });
+}
+
+function saveDetailEdits() {
+  const idx = S.notes.findIndex(n => n.id === S.currentNoteId);
+  if (idx === -1) return;
+  S.notes[idx].title = document.getElementById('detail-title-input').value;
+  S.notes[idx].organized_text = document.getElementById('detail-organized').value;
+  S.notes[idx].updated_at = new Date().toISOString();
+  S.originalText = S.notes[idx].organized_text;
+  persist();
+  renderLibrary();
+  snack('Changes saved ✓');
+}
+
+function copyOrganized() {
+  const txt = document.getElementById('detail-organized').value;
+  navigator.clipboard.writeText(txt).then(() => snack('Copied to clipboard')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); snack('Copied');
+  });
+}
+
+function deleteCurrentNote() {
+  if (!confirm('Delete this note permanently?')) return;
+  S.notes = S.notes.filter(n => n.id !== S.currentNoteId);
+  persist();
+  closeSheet('detail-sheet');
+  renderLibrary();
+  snack('Note deleted');
+}
+
+// ── SHEETS ──
+function openSheet(id) {
+  document.getElementById('scrim').classList.add('open');
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(id) {
+  document.getElementById('scrim').classList.remove('open');
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeAllSheets() {
+  document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('open'));
+  document.getElementById('scrim').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── SETTINGS ──
+function saveApiKey() {
+  S.apiKey = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('ns_apikey', S.apiKey);
+  snack('API key saved');
+}
+
+function updateStorage() {
+  try {
+    const used = new Blob(Object.values(localStorage)).size;
+    const limit = 5 * 1024 * 1024;
+    const pct = Math.min((used / limit) * 100, 100).toFixed(1);
+    const kb = (used / 1024).toFixed(0);
+    document.getElementById('storage-text').textContent = `${pct}% used (${kb} KB of ~5 MB)`;
+    document.getElementById('storage-bar').style.width = pct + '%';
+    if (pct > 85) document.getElementById('storage-bar').style.background = '#f2736a';
+  } catch(e) {}
+}
+
+function exportNotes() {
+  const blob = new Blob([JSON.stringify(S.notes, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `notesnap_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importNotes(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      const existing = new Set(S.notes.map(n => n.id));
+      const fresh = imported.filter(n => !existing.has(n.id));
+      S.notes = [...fresh, ...S.notes];
+      persist();
+      renderLibrary();
+      snack(`Imported ${fresh.length} note${fresh.length !== 1 ? 's' : ''}`);
+    } catch(err) { snack('Import failed: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function clearAllData() {
+  const conf = prompt('Type DELETE to erase all notes:');
+  if (conf !== 'DELETE') return;
+  S.notes = [];
+  persist();
+  renderLibrary();
+  snack('All data cleared');
+}
+
+// ── THEME ──
+function toggleTheme() {
+  S.theme = S.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('ns_theme', S.theme);
+  applyTheme();
+}
+
+const ICON_MOON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+const ICON_SUN  = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', S.theme);
+  document.getElementById('theme-icon-wrap').innerHTML = S.theme === 'dark' ? ICON_MOON : ICON_SUN;
+}
+
+// ── LIGHTBOX ──
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// ── SNACKBAR ──
+function snack(msg) {
+  const el = document.getElementById('snackbar');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── UTILS ──
+function persist() {
+  try { localStorage.setItem('ns_notes', JSON.stringify(S.notes)); }
+  catch(e) { snack('Storage full — export and delete old notes'); }
+  updateStorage();
+}
+function safeParseJSON(str, fallback) {
+  try { return JSON.parse(str) || fallback; } catch { return fallback; }
+}
+
+// Resize FAB position
+window.addEventListener('resize', updateFAB);
+</script>
+</body>
+</html>
