@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NoteSnap</title>
+<title>Scribe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -256,11 +256,7 @@ body {
   font-family:'Google Sans',sans-serif; font-size:14px; font-weight:500;
   color:var(--error); letter-spacing:.04em;
 }
-.voice-pulse-chip {
-  display:flex; align-items:center; gap:6px; padding:6px 12px;
-  background:var(--primary-container); border:1px solid rgba(76,175,130,.3);
-  border-radius:20px; font-size:12px; color:var(--primary);
-}
+
 .voice-transcript-box {
   background:var(--surface-variant); border-radius:16px;
   padding:16px; min-height:100px; max-height:180px;
@@ -459,7 +455,7 @@ body {
 <div id="app">
   <header class="app-bar" id="app-bar">
     <div style="width:40px"></div>
-    <span class="app-bar-title">NoteSnap</span>
+    <span class="app-bar-title">Scribe</span>
     <div class="app-bar-actions">
       <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
         <span id="theme-icon"></span>
@@ -526,10 +522,7 @@ body {
             <div class="rec-dot"></div>
             <span class="rec-timer" id="voice-timer">00:00</span>
           </div>
-          <div class="voice-pulse-chip" id="voice-pulse-chip" style="display:none">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            <span id="voice-pulse-count">0</span> insights
-          </div>
+
         </div>
         <div class="voice-transcript-box">
           <div class="voice-transcript-label">Live transcript</div>
@@ -639,7 +632,7 @@ body {
           </button>
         </div>
       </div>
-      <div style="text-align:center;color:var(--on-surface-variant);font-size:12px;margin-top:32px">NoteSnap v1.0 &nbsp;·&nbsp; Gemini 2.5 Flash</div>
+      <div style="text-align:center;color:var(--on-surface-variant);font-size:12px;margin-top:32px">Scribe &nbsp;·&nbsp; Gemini 2.5 Flash</div>
     </div>
 
   </div>
@@ -757,8 +750,8 @@ body {
     <circle cx="85" cy="82" r="16" fill="#4CAF82"/>
     <path d="M79 82l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
-  <div class="welcome-title">NoteSnap</div>
-  <div class="welcome-sub">Turn handwritten notes into organized digital text with AI — stored privately on your device.</div>
+  <div class="welcome-title">Scribe</div>
+  <div class="welcome-sub">Capture voice or photo — AI turns it into clean, organized notes stored privately on your device.</div>
   <button class="btn-filled" style="padding:0 32px;height:48px;font-size:16px" onclick="startApp()">Get Started</button>
 </div>
 
@@ -800,22 +793,13 @@ const S = {
 
 // Voice recording engine refs (not in S — these are mutable refs not serialised state)
 const VR = {
-  recognition:     null,
-  clockInterval:   null,
-  pulseInterval:   null,
-  wakeLock:        null,
-  seconds:         0,
-  pulseCount:      0,
-  transcriptSegs:  new Map(),   // kept for compat, unused by voice
-  finalSegments:   [],          // append-only array of final SR results
-  pulseSummaries:  [],
-  lastPulsedWords: 0,
-  finalizing:      false,
+  recognition:   null,
+  clockInterval: null,
+  mediaStream:   null,   // kept so we can stop mic tracks on end
+  seconds:       0,
+  finalSegments: [],     // append-only array of confirmed final SR segments
+  finalizing:    false,
 };
-
-const VOICE_PULSE_INTERVAL_MS   = 45000;
-const VOICE_MIN_WORDS_FOR_PULSE = 30;
-const wordCount = s => s.trim().split(/\s+/).filter(Boolean).length;
 const formatTime = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
@@ -921,9 +905,12 @@ function renderPreviews() {
     wrap.appendChild(d);
   });
   const has = S.files.length > 0;
-  hide('capture-idle', has);
-  hide('capture-files', !has);
-  if (has) hide('capture-error', true);
+  // Only manipulate photo UI — don't touch voice panels
+  if (S.captureMode === 'photo') {
+    hide('capture-idle', has);
+    hide('capture-files', !has);
+    if (has) hide('capture-error', true);
+  }
   updateFAB();
 }
 
@@ -984,7 +971,7 @@ Return ONLY a valid JSON object — no markdown, no code fences, no extra text:
 
     let p;
     try { p = JSON.parse(str); }
-    catch(pe) { console.error('[NoteSnap] raw:', raw); throw new Error('Could not parse AI response. Please retry.'); }
+    catch(pe) { console.error('[Scribe] raw:', raw); throw new Error('Could not parse AI response. Please retry.'); }
 
     const toArr = v => Array.isArray(v) ? v : (v ? String(v).split('\n').filter(Boolean) : []);
 
@@ -1012,13 +999,16 @@ Return ONLY a valid JSON object — no markdown, no code fences, no extra text:
     setProcessing(false);
     document.getElementById('error-msg').textContent = err.message;
     hide('capture-error', false);
-    console.error('[NoteSnap]', err);
+    console.error('[Scribe]', err);
   }
 }
 
 function setProcessing(on) {
   hide('capture-processing', !on);
-  hide('capture-files', on ? true : S.files.length === 0);
+  // Only touch capture-files if we're actually in photo mode
+  if (S.captureMode === 'photo') {
+    hide('capture-files', on ? true : S.files.length === 0);
+  }
   document.getElementById('progress-bar').classList.toggle('visible', on);
   const pbtn = document.getElementById('process-btn-wrap').querySelector('button');
   if (pbtn) { pbtn.disabled = on; }
@@ -1195,7 +1185,7 @@ function exportNotes() {
   const blob = new Blob([JSON.stringify(S.notes, null, 2)], { type:'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = 'notesnap_' + new Date().toISOString().slice(0,10) + '.json';
+  a.href = url; a.download = 'scribe_' + new Date().toISOString().slice(0,10) + '.json';
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
@@ -1206,7 +1196,7 @@ function importNotes(e) {
   r.onload = ev => {
     try {
       const imp = JSON.parse(ev.target.result);
-      if (!Array.isArray(imp)) throw new Error('Not a valid NoteSnap export file');
+      if (!Array.isArray(imp)) throw new Error('Not a valid Scribe export file');
       const have = new Set(S.notes.map(n => n.id));
       const fresh = imp.filter(n => !have.has(n.id));
       S.notes = [...fresh, ...S.notes];
@@ -1274,47 +1264,6 @@ function voiceGetTranscript() {
   return VR.finalSegments.join(' ');
 }
 
-async function voiceRunPulse(isFinal) {
-  const transcript = voiceGetTranscript();
-  const currentWords = wordCount(transcript);
-  const newWords = currentWords - VR.lastPulsedWords;
-
-  if (!isFinal && newWords < VOICE_MIN_WORDS_FOR_PULSE) return;
-  if (!S.apiKey) return;
-
-  const chunk = isFinal
-    ? transcript
-    : transcript.split(' ').slice(VR.lastPulsedWords).join(' ');
-  if (!chunk.trim()) return;
-
-  try {
-    const res = await fetch(API_URL(S.apiKey), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text:
-        `You are taking notes on a live session — a lecture, sermon, meeting, or talk. From this speech segment, extract only the ideas worth writing down: key points, notable statements, names, references, or anything the speaker clearly emphasized. Skip filler, repetition, and tangents. If nothing is worth noting, respond with exactly "SKIP".
-
-Speech segment:
-"${chunk}"
-
-Respond with 1-3 short bullet points only. Each bullet should read like a real person's handwritten note — terse, clear, no fluff. No preamble.`
-      }] }] })
-    });
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (text && !text.includes('SKIP')) {
-      VR.pulseSummaries.push(text);
-      VR.pulseCount++;
-      if (!isFinal) VR.lastPulsedWords = currentWords;
-      // Update chip
-      document.getElementById('voice-pulse-count').textContent = VR.pulseCount;
-      document.getElementById('voice-pulse-chip').style.display = 'flex';
-    }
-  } catch(e) {
-    console.warn('[Voice] pulse failed:', e.message);
-  }
-}
-
 function startVoiceSpeechRecognition() {
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Speech) { snack('Speech recognition not supported in this browser'); return false; }
@@ -1373,43 +1322,59 @@ function startVoiceSpeechRecognition() {
   return true;
 }
 
+function voiceCleanTranscriptPass(raw) {
+  // Single dedup pass: walk words, skip any incoming sequence that matches
+  // the tail of what we've already output (catches SR restart repetitions)
+  const words = raw.trim().split(/\s+/);
+  const out = [];
+  let i = 0;
+  while (i < words.length) {
+    let skipped = false;
+    const maxLook = Math.min(12, words.length - i, out.length);
+    for (let w = maxLook; w >= 2; w--) {
+      const incoming = words.slice(i, i + w).join(' ').toLowerCase();
+      const tail = out.slice(-w).join(' ').toLowerCase();
+      if (incoming === tail) { i += w; skipped = true; break; }
+    }
+    if (!skipped) { out.push(words[i]); i++; }
+  }
+  return out.join(' ').trim();
+}
+
 function voiceCleanTranscript(raw) {
-  // Collapse runs of repeated phrases (Web Speech API artifact)
-  // Split into sentences, deduplicate consecutive identical ones, rejoin
-  const sentences = raw.split(/(?<=[.!?])\s+|(?<=\n)/);
-  const deduped = sentences.filter((s, i) => s !== sentences[i - 1]);
-  let clean = deduped.join(' ').trim();
-  // Hard cap at ~12000 chars (~3000 words) to stay within token budget
-  if (clean.length > 12000) clean = clean.slice(0, 12000) + '…';
+  if (!raw) return '';
+  // Two passes handle nested SR repetition layers (safety net — primary fix
+  // is in the SR handler which only stores isFinal=true segments)
+  let clean = voiceCleanTranscriptPass(raw);
+  clean = voiceCleanTranscriptPass(clean);
+  // Hard cap at word boundary near 12000 chars (~3000 words)
+  if (clean.length > 12000) {
+    clean = clean.slice(0, 12000);
+    const lastSpace = clean.lastIndexOf(' ');
+    if (lastSpace > 11000) clean = clean.slice(0, lastSpace);
+    clean += '…';
+  }
   return clean;
 }
 
 async function startVoiceRecording() {
   if (!S.apiKey) { switchView('settings'); snack('Add your API key in Settings first'); return; }
 
-  // Request mic
+  // Request mic — store stream so we can stop tracks on end
+  let stream;
   try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
     snack('Microphone access denied'); return;
   }
-
-  // Wake lock
-  if ('wakeLock' in navigator) {
-    try { VR.wakeLock = await navigator.wakeLock.request('screen'); } catch {}
-  }
+  VR.mediaStream = stream;
 
   // Reset state
-  VR.transcriptSegs.clear();
-  VR.finalSegments   = [];
-  VR.pulseSummaries  = [];
-  VR.lastPulsedWords = 0;
-  VR.pulseCount      = 0;
-  VR.seconds         = 0;
-  VR.finalizing      = false;
+  VR.finalSegments = [];
+  VR.seconds       = 0;
+  VR.finalizing    = false;
 
   S.voiceRecording = true;
-  document.getElementById('voice-pulse-chip').style.display = 'none';
   document.getElementById('voice-transcript').textContent = 'Listening…';
   document.getElementById('voice-transcript').classList.add('empty');
 
@@ -1427,9 +1392,6 @@ async function startVoiceRecording() {
     VR.seconds++;
     document.getElementById('voice-timer').textContent = formatTime(VR.seconds);
   }, 1000);
-
-  // Pulse timer
-  VR.pulseInterval = setInterval(() => voiceRunPulse(false), VOICE_PULSE_INTERVAL_MS);
 }
 
 async function stopVoiceRecording() {
@@ -1437,49 +1399,43 @@ async function stopVoiceRecording() {
   VR.finalizing = true;
   S.voiceRecording = false;
 
-  // Stop everything
-  if (VR.recognition)   { try { VR.recognition.stop(); } catch {} VR.recognition = null; }
-  if (VR.wakeLock)      { try { await VR.wakeLock.release(); } catch {} VR.wakeLock = null; }
+  // Stop speech recognition
+  if (VR.recognition) { try { VR.recognition.stop(); } catch {} VR.recognition = null; }
+  // Stop mic — releases the browser mic indicator
+  if (VR.mediaStream) { VR.mediaStream.getTracks().forEach(t => t.stop()); VR.mediaStream = null; }
   clearInterval(VR.clockInterval);
-  clearInterval(VR.pulseInterval);
 
-  // Show finalizing state
+  // Switch UI
   hide('voice-recording',  true);
   hide('voice-finalizing', false);
   document.getElementById('capture-mode-switch').style.pointerEvents = '';
 
-  // Give speech recognition a moment to flush last segment
-  await new Promise(r => setTimeout(r, 1200));
+  // Give SR a moment to flush any pending final segment
+  await new Promise(r => setTimeout(r, 800));
 
   const transcript = voiceCleanTranscript(voiceGetTranscript());
   const label = document.getElementById('voice-finalizing-label');
 
   try {
-    // Final pulse
-    label.textContent = 'Extracting key points…';
-    await voiceRunPulse(true);
-
-    // Synthesize
     label.textContent = 'Writing your notes…';
-    const pulseContext = VR.pulseSummaries.join('\n\n');
 
     const prompt = `You are summarizing a recorded session — a lecture, sermon, meeting, or talk — into compact notes, the way a sharp student would write them by hand.
 
-${pulseContext ? `NOTES CAPTURED DURING SESSION:\n${pulseContext}\n\n` : ''}${transcript ? `FULL TRANSCRIPT:\n${transcript}` : '(No transcript available — use captured notes only)'}
+${transcript ? `TRANSCRIPT:\n${transcript}` : '(No transcript captured)'}
 
-Write notes that a person could read in 2 minutes and walk away knowing what the session was about. What were the 3-5 things that actually mattered? What was the main idea? Was anything actionable or memorable said?
+Write notes a person could read in 2 minutes and understand what the session was about. Focus on the 3-5 things that actually mattered. What was the main idea? Was anything actionable or memorable said?
 
 Rules:
-- No padding, no filler, no "In this session..." openers
-- Use short bullet points, not paragraphs
+- No padding, no filler, no opening sentence summarising the session
+- Short bullet points, not paragraphs
 - Group under 2-3 brief headings at most (e.g. ## Main Points, ## To Do, ## Worth Remembering)
-- If something was only mentioned in passing, leave it out
-- The entire summary should fit comfortably on one screen
+- Leave out anything only mentioned in passing
+- The whole summary should fit on one screen
 
-Return ONLY a valid JSON object — no markdown fences, no extra text:
+Return ONLY valid JSON — no markdown fences, no extra text:
 {
-  "title": "short specific title of what this session was about — max 7 words",
-  "organized_text": "the compact notes in markdown — short bullets under brief headings",
+  "title": "short specific title — max 7 words",
+  "organized_text": "compact notes in markdown — bullets under brief headings",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"]
 }`;
@@ -1509,7 +1465,7 @@ Return ONLY a valid JSON object — no markdown fences, no extra text:
       id: Date.now(),
       title:          String(p.title || 'Voice Note').trim(),
       transcription:  transcript,           // raw transcript stored as transcription
-      organized_text: String(p.organized_text || pulseContext || '').trim(),
+      organized_text: String(p.organized_text || '').trim(),
       summary:        toArr(p.summary),
       tags:           toArr(p.tags),
       confidence_notes: '',
@@ -1536,30 +1492,30 @@ Return ONLY a valid JSON object — no markdown fences, no extra text:
 
   } catch(err) {
     console.error('[Voice]', err);
-    // Salvage: save raw transcript as note
-    if (transcript) {
-      const note = {
-        id: Date.now(),
-        title: 'Voice Note',
-        transcription: transcript,
-        organized_text: transcript,
-        summary: [],
-        tags: [],
-        confidence_notes: 'AI synthesis failed — raw transcript saved.',
-        images: [],
-        source: 'voice',
-        duration: VR.seconds,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      S.notes.unshift(note);
-      persist();
-    }
+    // Salvage: save raw transcript so the session isn't lost
+    const fallbackText = transcript || '(No transcript captured)';
+    const note = {
+      id: Date.now(),
+      title: 'Voice Note',
+      transcription: fallbackText,
+      organized_text: fallbackText,
+      summary: [],
+      tags: [],
+      confidence_notes: 'AI synthesis failed — raw transcript saved.',
+      images: [],
+      source: 'voice',
+      duration: VR.seconds,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    S.notes.unshift(note);
+    persist();
     document.getElementById('progress-bar').classList.remove('visible');
     hide('voice-finalizing', true);
     hide('voice-idle',       false);
     VR.finalizing = false;
-    snack(err.message || 'Something went wrong');
+    switchView('library');
+    snack('Synthesis failed — raw transcript saved');
   }
 }
 
