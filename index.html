@@ -565,7 +565,7 @@ body {
       <ul class="detail-summary" id="detail-summary"></ul>
     </div>
     <div id="detail-confidence" class="confidence-note hidden"></div>
-    <div style="margin-top:20px">
+    <div id="save-btn-wrap" class="hidden" style="margin-top:20px">
       <button class="btn-filled w-full" onclick="saveDetailEdits()">Save Changes</button>
     </div>
   </div>
@@ -1151,6 +1151,7 @@ function setEditMode(on) {
   document.getElementById('organized-view').classList.toggle('hidden', on);
   document.getElementById('detail-organized').classList.toggle('hidden', !on);
   document.getElementById('edit-toggle-label').textContent = on ? 'Preview' : 'Edit';
+  document.getElementById('save-btn-wrap').classList.toggle('hidden', !on);
   // Swap icon: pencil → eye
   document.getElementById('edit-toggle-icon').innerHTML = on
     ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'  // eye
