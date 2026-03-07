@@ -806,7 +806,8 @@ const VR = {
   wakeLock:        null,
   seconds:         0,
   pulseCount:      0,
-  transcriptSegs:  new Map(),
+  transcriptSegs:  new Map(),   // kept for compat, unused by voice
+  finalSegments:   [],          // append-only array of final SR results
   pulseSummaries:  [],
   lastPulsedWords: 0,
   finalizing:      false,
@@ -1270,7 +1271,7 @@ function switchCaptureMode(mode) {
 }
 
 function voiceGetTranscript() {
-  return Array.from(VR.transcriptSegs.values()).join(' ');
+  return VR.finalSegments.join(' ');
 }
 
 async function voiceRunPulse(isFinal) {
@@ -1318,36 +1319,69 @@ function startVoiceSpeechRecognition() {
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Speech) { snack('Speech recognition not supported in this browser'); return false; }
 
-  const rec = new Speech();
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.lang = 'en-US';
+  function createSession() {
+    const rec = new Speech();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
 
-  rec.onresult = e => {
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) VR.transcriptSegs.set(i, e.results[i][0].transcript);
-    }
-    const full = voiceGetTranscript();
-    const preview = full.length > 300 ? '…' + full.slice(-300) : full;
-    const el = document.getElementById('voice-transcript');
-    el.textContent = preview || 'Listening…';
-    el.classList.toggle('empty', !preview);
-  };
+    // Track which result indices we've already committed as final
+    // so a new session (after auto-restart) doesn't re-add them.
+    const committedIndices = new Set();
 
-  rec.onerror = e => {
-    if (e.error === 'no-speech' || e.error === 'network') {
-      setTimeout(() => {
-        if (VR.recognition && !VR.finalizing) try { VR.recognition.start(); } catch {}
-      }, 500);
-    }
-  };
+    rec.onresult = e => {
+      let interimText = '';
 
-  rec.onend = () => {
-    if (!VR.finalizing) setTimeout(() => { try { rec.start(); } catch {} }, 300);
-  };
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          // Only append if we haven't seen this index before in this session
+          if (!committedIndices.has(i)) {
+            committedIndices.add(i);
+            VR.finalSegments.push(e.results[i][0].transcript.trim());
+          }
+        } else {
+          interimText += e.results[i][0].transcript;
+        }
+      }
 
-  VR.recognition = rec;
-  try { rec.start(); return true; } catch(e) { return false; }
+      // Live display: committed finals + current interim
+      const base = VR.finalSegments.join(' ');
+      const full = interimText ? base + ' ' + interimText : base;
+      const preview = full.length > 300 ? '…' + full.slice(-300) : full;
+      const el = document.getElementById('voice-transcript');
+      el.textContent = preview || 'Listening…';
+      el.classList.toggle('empty', !preview);
+    };
+
+    rec.onerror = e => {
+      if (e.error === 'no-speech' || e.error === 'network') {
+        setTimeout(() => {
+          if (!VR.finalizing) createSession();
+        }, 500);
+      }
+    };
+
+    rec.onend = () => {
+      if (!VR.finalizing) setTimeout(() => createSession(), 300);
+    };
+
+    VR.recognition = rec;
+    try { rec.start(); } catch(e) { console.warn('[Voice] SR start failed', e); }
+  }
+
+  createSession();
+  return true;
+}
+
+function voiceCleanTranscript(raw) {
+  // Collapse runs of repeated phrases (Web Speech API artifact)
+  // Split into sentences, deduplicate consecutive identical ones, rejoin
+  const sentences = raw.split(/(?<=[.!?])\s+|(?<=\n)/);
+  const deduped = sentences.filter((s, i) => s !== sentences[i - 1]);
+  let clean = deduped.join(' ').trim();
+  // Hard cap at ~12000 chars (~3000 words) to stay within token budget
+  if (clean.length > 12000) clean = clean.slice(0, 12000) + '…';
+  return clean;
 }
 
 async function startVoiceRecording() {
@@ -1367,6 +1401,7 @@ async function startVoiceRecording() {
 
   // Reset state
   VR.transcriptSegs.clear();
+  VR.finalSegments   = [];
   VR.pulseSummaries  = [];
   VR.lastPulsedWords = 0;
   VR.pulseCount      = 0;
@@ -1416,7 +1451,7 @@ async function stopVoiceRecording() {
   // Give speech recognition a moment to flush last segment
   await new Promise(r => setTimeout(r, 1200));
 
-  const transcript = voiceGetTranscript();
+  const transcript = voiceCleanTranscript(voiceGetTranscript());
   const label = document.getElementById('voice-finalizing-label');
 
   try {
