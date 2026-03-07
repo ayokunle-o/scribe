@@ -146,24 +146,20 @@ body {
 .btn-text:hover::before { opacity:.08; }
 .btn-danger { background:var(--error) !important; border-color:var(--error) !important; color:#fff !important; }
 .w-full { width:100%; }
-/* FAB */
-#fab {
-  position:fixed; right:16px; bottom:calc(var(--nav-h) + var(--safe-b) + 16px);
-  width:56px; height:56px; border-radius:16px;
-  background:var(--primary); color:#fff; border:none;
-  box-shadow:var(--e3); cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-  font-family:'Google Sans',sans-serif; font-size:10px; font-weight:500;
-  z-index:15; overflow:hidden;
-  transition:box-shadow .2s,transform .2s var(--ease-out),opacity .2s;
+/* PROCESS BUTTON */
+#process-btn-wrap {
+  padding:12px 16px calc(12px + var(--safe-b));
+  background:var(--bg);
+  border-top:1px solid var(--outline-variant);
+  position:fixed; bottom:calc(var(--nav-h) + var(--safe-b)); left:0; right:0;
+  z-index:15;
+  transition:transform .25s var(--ease-out), opacity .2s;
 }
-#fab::before { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; }
-#fab:hover { box-shadow:var(--e3),0 0 0 4px rgba(76,175,130,.15); transform:translateY(-1px); }
-#fab:hover::before { opacity:.08; }
-#fab:active { transform:scale(.96); }
-#fab.hidden { transform:translateY(80px) scale(.85); opacity:0; pointer-events:none; }
-.fab-icon { font-size:22px; line-height:1; position:relative; }
-#fab span { position:relative; }
+#process-btn-wrap.hidden { transform:translateY(100%); opacity:0; pointer-events:none; }
+@media(min-width:600px) {
+  #process-btn-wrap { left:50%; transform:translateX(-50%); width:480px; border-radius:0; bottom:calc(var(--nav-h)); }
+  #process-btn-wrap.hidden { transform:translateX(-50%) translateY(100%); opacity:0; }
+}
 /* CAPTURE */
 .upload-zone {
   text-align:center; padding:36px 24px;
@@ -189,7 +185,7 @@ body {
   display:flex; align-items:center; justify-content:center; line-height:1;
 }
 .processing-state { text-align:center; padding:56px 24px; }
-.processing-icon { font-size:48px; margin-bottom:16px; animation:pulse 1.8s ease-in-out infinite; display:block; }
+.processing-icon { margin-bottom:16px; animation:pulse 1.8s ease-in-out infinite; display:flex; justify-content:center; }
 @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.7} }
 .processing-label { font-family:'Google Sans',sans-serif; font-size:16px; font-weight:500; color:var(--primary); }
 .processing-sub { font-size:13px; color:var(--on-surface-variant); margin-top:6px; }
@@ -423,7 +419,9 @@ body {
       </div>
 
       <div id="capture-processing" class="processing-state hidden">
-        <span class="processing-icon">✍️</span>
+        <span class="processing-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </span>
         <div class="processing-label">Reading your handwriting…</div>
         <div class="processing-sub">Gemini AI is transcribing and organizing your notes</div>
       </div>
@@ -434,7 +432,9 @@ body {
       <div class="search-bar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="search-input" placeholder="Search notes…" oninput="onSearch()">
-        <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+        <button class="search-clear" id="search-clear" onclick="clearSearch()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</button>
       </div>
       <div class="lib-meta">
         <span class="lib-count" id="lib-count"></span>
@@ -445,7 +445,9 @@ body {
         </select>
       </div>
       <div id="lib-empty" class="empty-state hidden">
-        <span class="empty-icon">📝</span>
+        <span class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--on-surface-variant)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </span>
         <div class="empty-title">No notes yet</div>
         <div class="empty-sub">Capture your first handwritten note to get started</div>
       </div>
@@ -514,10 +516,12 @@ body {
 </div>
 
 <!-- FAB -->
-<button id="fab" class="hidden" onclick="processNotes()">
-  <span class="fab-icon">✨</span>
-  <span>Process</span>
-</button>
+<div id="process-btn-wrap" class="hidden">
+  <button class="btn-filled w-full" style="height:48px;font-size:15px;border-radius:24px" onclick="processNotes()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    Process Notes
+  </button>
+</div>
 
 <!-- SCRIM -->
 <div class="scrim" id="scrim" onclick="closeAllSheets()"></div>
@@ -544,9 +548,18 @@ body {
     <input type="text" id="detail-title-input" placeholder="Note title…">
     <div class="detail-meta" id="detail-meta"></div>
     <div class="md-tabs" id="detail-tabs">
-      <button class="md-tab active" data-tab="organized">✨ Organized</button>
-      <button class="md-tab" data-tab="raw">📝 Raw</button>
-      <button class="md-tab" data-tab="summary">🗝️ Summary</button>
+      <button class="md-tab active" data-tab="organized">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+  Organized
+</button>
+      <button class="md-tab" data-tab="raw">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+  Raw
+</button>
+      <button class="md-tab" data-tab="summary">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+  Summary
+</button>
     </div>
     <div class="tab-pane active" id="pane-organized">
       <div id="organized-view" class="prose-view"></div>
@@ -581,8 +594,8 @@ body {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <p style="font-size:15px;line-height:1.7;color:var(--on-surface-variant);margin-bottom:16px"><strong style="color:var(--on-surface)">🔒 Private by Design</strong><br>All notes are stored locally in your browser. Nothing leaves your device.</p>
-    <p style="font-size:15px;line-height:1.7;color:var(--on-surface-variant);margin-bottom:24px"><strong style="color:var(--on-surface)">📱 Multi-Device</strong><br>Each device has its own independent library. Use <strong>Export</strong> in Settings to download a JSON backup, then <strong>Import</strong> on another device.</p>
+    <p style="font-size:15px;line-height:1.7;color:var(--on-surface-variant);margin-bottom:16px"><strong style="color:var(--on-surface);display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Private by Design</strong><br>All notes are stored locally in your browser. Nothing leaves your device.</p>
+    <p style="font-size:15px;line-height:1.7;color:var(--on-surface-variant);margin-bottom:24px"><strong style="color:var(--on-surface);display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Multi-Device</strong><br>Each device has its own independent library. Use <strong>Export</strong> in Settings to download a JSON backup, then <strong>Import</strong> on another device.</p>
     <button class="btn-filled w-full" onclick="closeSheet('sync-sheet')">Got it</button>
   </div>
 </div>
@@ -736,7 +749,7 @@ function renderPreviews() {
   S.files.forEach(f => {
     const d = document.createElement('div');
     d.className = 'preview-thumb';
-    d.innerHTML = '<img src="' + f.base64 + '" alt=""><button class="rm-btn" onclick="removeFile(' + f.id + ')">✕</button>';
+    d.innerHTML = '<img src="' + f.base64 + '" alt=""><button class="rm-btn" onclick="removeFile(' + f.id + ')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
     wrap.appendChild(d);
   });
   const has = S.files.length > 0;
@@ -757,7 +770,7 @@ function clearFiles() {
 }
 
 function updateFAB() {
-  document.getElementById('fab').classList.toggle('hidden', !(S.view === 'capture' && S.files.length > 0));
+  document.getElementById('process-btn-wrap').classList.toggle('hidden', !(S.view === 'capture' && S.files.length > 0));
 }
 
 // ── PROCESS ──────────────────────────────────────────────────────────────────
@@ -824,7 +837,7 @@ Return ONLY a valid JSON object — no markdown, no code fences, no extra text:
     persist();
     setProcessing(false);
     clearFiles();
-    snack('Note saved ✓');
+    snack('Note saved');
     switchView('library');
 
   } catch(err) {
@@ -839,9 +852,8 @@ function setProcessing(on) {
   hide('capture-processing', !on);
   hide('capture-files', on ? true : S.files.length === 0);
   document.getElementById('progress-bar').classList.toggle('visible', on);
-  const fab = document.getElementById('fab');
-  fab.style.opacity = on ? '0.4' : '1';
-  fab.style.pointerEvents = on ? 'none' : '';
+  const pbtn = document.getElementById('process-btn-wrap').querySelector('button');
+  if (pbtn) { pbtn.disabled = on; }
 }
 
 // ── LIBRARY ──────────────────────────────────────────────────────────────────
@@ -916,7 +928,7 @@ function openNote(id) {
   document.getElementById('detail-summary').innerHTML  = (note.summary || []).map(s => '<li>' + esc(s) + '</li>').join('');
 
   const conf = document.getElementById('detail-confidence');
-  if (note.confidence_notes) { conf.textContent = '⚠️ ' + note.confidence_notes; conf.classList.remove('hidden'); }
+  if (note.confidence_notes) { conf.textContent = note.confidence_notes; conf.classList.remove('hidden'); }
   else { conf.classList.add('hidden'); }
 
   // Always open in view mode
@@ -949,7 +961,7 @@ function saveDetailEdits() {
   // Re-render view and switch back to view mode
   renderOrganizedView(S.notes[idx].organized_text);
   setEditMode(false);
-  persist(); renderLibrary(); snack('Changes saved ✓');
+  persist(); renderLibrary(); snack('Changes saved');
 }
 
 function copyOrganized() {
@@ -995,7 +1007,7 @@ function closeAllSheets() {
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) { snack('Please enter an API key'); return; }
-  S.apiKey = key; localStorage.setItem('ns_apikey', key); snack('API key saved ✓');
+  S.apiKey = key; localStorage.setItem('ns_apikey', key); snack('API key saved');
 }
 
 function updateStorage() {
@@ -1029,7 +1041,7 @@ function importNotes(e) {
       const fresh = imp.filter(n => !have.has(n.id));
       S.notes = [...fresh, ...S.notes];
       persist(); renderLibrary();
-      snack('Imported ' + fresh.length + ' note' + (fresh.length !== 1 ? 's' : '') + ' ✓');
+      snack('Imported ' + fresh.length + ' note' + (fresh.length !== 1 ? 's' : ''));
     } catch(err) { snack('Import failed: ' + err.message); }
   };
   r.readAsText(file);
