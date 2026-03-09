@@ -830,7 +830,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
       summary: toArr(p.summary),
       tags: toArr(p.tags),
       confidence_notes: String(p.confidence_notes || '').trim(),
-      images: S.files.map(f => f.base64),
+      images: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -892,7 +892,7 @@ function renderLibrary() {
       + '<div class="card-avatar">' + letter + '</div>'
       + '<div class="card-header-text">'
       + '<div class="card-title">' + esc(n.title) + '</div>'
-      + '<div class="card-meta">' + dateStr + ' · ' + n.images.length + ' page' + (n.images.length !== 1 ? 's' : '') + '</div>'
+      + '<div class="card-meta">' + dateStr + '</div>'
       + '</div></div>'
       + '<div class="card-snippet">' + snippet + '</div>'
       + '<div class="chips-row">' + tags + '</div>'
