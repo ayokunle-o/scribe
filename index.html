@@ -489,10 +489,20 @@ body {
           </button>
           <input type="file" id="import-input" accept=".json" hidden onchange="importNotes(event)">
           <div class="divider"></div>
-          <button class="btn-outlined w-full btn-danger" onclick="clearAllData()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
-            Clear All Data
-          </button>
+          <div id="clear-data-wrap">
+            <button class="btn-outlined w-full btn-danger" onclick="clearAllData()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+              Clear All Data
+            </button>
+            <div id="clear-confirm" class="hidden" style="margin-top:8px;display:flex;gap:8px">
+              <button class="btn-filled w-full btn-danger" onclick="clearAllDataConfirmed()" style="flex:1">
+                Yes, delete everything
+              </button>
+              <button class="btn-outlined" onclick="cancelClearData()" style="flex:0 0 auto">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div style="text-align:center;color:var(--on-surface-variant);font-size:12px;margin-top:32px">Scribe &nbsp;·&nbsp; Gemini 2.5 Flash</div>
@@ -1052,8 +1062,18 @@ function importNotes(e) {
 }
 
 function clearAllData() {
-  if (prompt('Type DELETE to permanently erase all notes:') !== 'DELETE') return;
-  S.notes = []; persist(); renderLibrary(); snack('All data cleared');
+  // Show inline confirmation — prompt() is blocked on mobile browsers
+  document.getElementById('clear-confirm').classList.remove('hidden');
+}
+function cancelClearData() {
+  document.getElementById('clear-confirm').classList.add('hidden');
+}
+function clearAllDataConfirmed() {
+  S.notes = [];
+  persist();
+  renderLibrary();
+  document.getElementById('clear-confirm').classList.add('hidden');
+  snack('All data cleared');
 }
 
 function persist() {
