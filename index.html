@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Scribe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -531,7 +532,7 @@ body {
 <!-- FAB -->
 <div id="process-btn-wrap" class="hidden">
   <button class="btn-filled w-full" style="height:48px;font-size:15px" onclick="processNotes()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
     Process Notes
   </button>
 </div>
@@ -794,14 +795,16 @@ async function processNotes() {
 
   setProcessing(true);
 
-  const PROMPT = `You are a handwriting transcription assistant. Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. Treat multiple images as consecutive pages of one note.
+  const PROMPT = `You are a handwriting transcription assistant. Your job is to READ and TRANSCRIBE — not to rewrite, improve, or paraphrase. The writer's original words, voice, and phrasing must be preserved exactly. Never substitute the writer's words with cleaner or more formal alternatives.
+
+Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. Treat multiple images as consecutive pages of one note.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
-  "transcription": "raw handwriting as clean digital text preserving original structure",
-  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate. If the notes contain non-English words or phrases (including Nigerian languages like Igbo, Yoruba, Hausa, or any other language), add an English translation in parentheses after every such phrase without exception — do not skip any. If diagrams or figures are present, capture every single label, number, variable, and expression visible in or around them — nothing should be omitted. List all labels exactly as written including superscripts (e.g. x²y, not x^2y). Do not interpret or infer relationships, just faithfully record every piece of text associated with each figure.",
-  "summary": ["key point 1", "key point 2", "key point 3"],
+  "transcription": "raw handwriting transcribed as-is, preserving the writer's exact words and structure",
+  "organized_text": "the transcription formatted with markdown for readability — using # for main heading, ## for section headings only where the notes clearly shift topic, **bold** for key terms. CRITICAL: use the writer's exact words throughout. Do not rewrite any sentence. Do not paraphrase. Do not make the language more formal or polished. For personal, narrative, or journal-style writing, keep the conversational tone and flow as paragraphs. For factual or study notes, use bullet lists. If the notes contain non-English words or phrases (including Nigerian languages like Igbo, Yoruba, Hausa, or any other language), add an English translation in parentheses after every such phrase. If diagrams or figures are present, capture every label, number, variable, and expression exactly as written including superscripts (e.g. x²y not x^2y).",
+  "summary": ["brief point using the writer's own words", "brief point using the writer's own words", "brief point using the writer's own words"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
 }`;
