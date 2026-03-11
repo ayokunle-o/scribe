@@ -626,7 +626,7 @@ body {
     <path d="M79 82l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
   <div class="welcome-title">Scribe</div>
-  <div class="welcome-sub">Capture voice or photo — AI turns it into clean, organized notes stored privately on your device.</div>
+  <div class="welcome-sub">Photograph your handwritten pages — AI turns them into clean, organized notes stored privately on your device.</div>
   <button class="btn-filled" style="height:48px;font-size:15px" onclick="startApp()">Get Started</button>
 </div>
 
@@ -832,8 +832,8 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
     const raw = candidate?.content?.parts?.[0]?.text;
     console.error('[Scribe] finishReason:', finishReason, 'raw:', raw);
     if (!raw) {
-      const reason = finishReason ? \` (reason: \${finishReason})\` : '';
-      throw new Error(\`AI returned an empty response\${reason}. Please try again.\`);
+      const reason = finishReason ? ` (reason: ${finishReason})` : '';
+      throw new Error(`AI returned an empty response${reason}. Please try again.`);
     }
 
     // Robust extraction: strip fences, find outermost { }
