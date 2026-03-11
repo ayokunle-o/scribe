@@ -925,18 +925,21 @@ async function processNotes() {
   setProcessing(true);
 
   const PROMPTS = {
-    verbatim: `You are a handwriting transcription assistant. Your only job is to copy exactly what is written — nothing more.
+    verbatim: `You are a handwriting transcription assistant. Copy the notes exactly as written — do not correct, rephrase, or improve anything.
 
-Analyze the provided image(s) of handwritten notes. If multiple images are provided, each image has a "PAGE X OF Y" label stamped in the top-left corner. Transcribe them strictly in that order: Page 1 first, then Page 2, and so on.
+RULES:
+1. Preserve every word, abbreviation, shorthand, misspelling, and symbol exactly as written.
+2. Physical line breaks from narrow paper width are NOT intentional. Join wrapped lines into continuous flowing sentences. Only break into a new paragraph where the writer clearly started a new thought.
+3. If multiple images are provided, each has a PAGE X OF Y label — process strictly in that order.
 
-Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
+Return ONLY a valid JSON object, no markdown, no code fences:
 {
   "title": "concise topic title max 8 words",
-  "transcription": "copy every word exactly as written — preserve all abbreviations, shorthand, symbols, crossed-out words, misspellings, and incomplete sentences. IMPORTANT: physical line breaks caused by the paper width are NOT intentional — join wrapped lines into continuous sentences as the writer intended. Only preserve a line break where the writer clearly started a new thought, paragraph, or section. Do not correct, expand, or infer anything.",
-  "organized_text": "same content as transcription, formatted into flowing paragraphs. Join lines that are continuations of the same sentence — do not treat every physical line break as a new paragraph. Only start a new paragraph where the writer clearly began a new thought or section. Use ## only where the writer drew a clear section break or heading. Do not rephrase a single word.",
-  "summary": ["key point copied verbatim from the notes", "key point copied verbatim from the notes", "key point copied verbatim from the notes"],
+  "transcription": "every word exactly as written, wrapped lines joined into sentences",
+  "organized_text": "same words as transcription grouped into flowing paragraphs, new paragraph only where writer started a new thought",
+  "summary": ["direct quote from notes", "direct quote from notes", "direct quote from notes"],
   "tags": ["tag1", "tag2", "tag3"],
-  "confidence_notes": "list every word or phrase you were uncertain about"
+  "confidence_notes": "list unclear words or empty string"
 }`,
 
     clean: `You are a handwriting transcription assistant. Your job is to READ and TRANSCRIBE — not to rewrite, improve, or paraphrase. The writer's original words, voice, and phrasing must be preserved exactly. Never substitute the writer's words with cleaner or more formal alternatives.
@@ -957,7 +960,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 
 Analyze the provided image(s) of handwritten notes. If multiple images are provided, each image has a "PAGE X OF Y" label stamped in the top-left corner. Always process them in that order.
 
-Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
+Return ONLY a valid JSON object - no markdown, no code fences, no extra text. CRITICAL: all field values are JSON strings — do not use unescaped double quotes inside any value:
 {
   "title": "clear descriptive title max 8 words",
   "transcription": "clean readable transcription of what was written, with obvious errors corrected and abbreviations expanded",
@@ -1038,16 +1041,49 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
     }
 
     // Robust extraction: strip fences, find outermost { }
-    let str = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    let str = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
     const i0 = str.indexOf('{'), i1 = str.lastIndexOf('}');
     if (i0 === -1 || i1 === -1) throw new Error('AI did not return valid JSON. Please retry.');
-    str = str.slice(i0, i1 + 1).replace(/,(\s*[}\]])/g, '$1'); // fix trailing commas
+    str = str.slice(i0, i1 + 1);
 
     let p;
+    // First attempt — direct parse
     try { p = JSON.parse(str); }
-    catch(pe) { console.error('[Scribe] raw:', raw); throw new Error('Could not parse AI response. Please retry.'); }
-
-    const toArr = v => Array.isArray(v) ? v : (v ? String(v).split('\n').filter(Boolean) : []);
+    catch(e1) {
+      // Second attempt — fix trailing commas then try again
+      try {
+        let s2 = str.replace(/,(\s*[}\]]])/g, '$1');
+        p = JSON.parse(s2);
+      } catch(e2) {
+        // Third attempt — extract each field individually by regex key:"value"
+        try {
+          const extract = (key) => {
+            const re = new RegExp('"' + key + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"');
+            const m = str.match(re);
+            return m ? m[1].replace(/\\n/g, '\n') : '';
+          };
+          const extractArr = (key) => {
+            const re = new RegExp('"' + key + '"\\s*:\\s*\\[([^\\]]*?)\\]');
+            const m = str.match(re);
+            if (!m) return [];
+            return [...m[1].matchAll(/"((?:[^"\\\\]|\\\\.)*)"/g)].map(x => x[1]);
+          };
+          p = {
+            title: extract('title'),
+            transcription: extract('transcription'),
+            organized_text: extract('organized_text'),
+            summary: extractArr('summary'),
+            tags: extractArr('tags'),
+            confidence_notes: extract('confidence_notes')
+          };
+          if (!p.title && !p.transcription) throw new Error('extraction failed');
+        } catch(e3) {
+          console.error('[Scribe] parse error:', e1.message, '|', e2.message);
+          console.error('[Scribe] raw:', raw.slice(0, 500));
+          throw new Error('Could not parse AI response. Please retry.');
+        }
+      }
+    } const toArr = v => Array.isArray(v) ? v : (v ? String(v).split('\n').filter(Boolean) : []);
 
     const note = {
       id: Date.now(),
