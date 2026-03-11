@@ -147,6 +147,12 @@ body {
 .btn-text:hover::before { opacity:.08; }
 .btn-danger { background:var(--error) !important; border-color:var(--error) !important; color:#fff !important; }
 .w-full { width:100%; }
+/* CLEANING LEVEL */
+.clean-level-wrap { margin-bottom:10px; }
+.clean-level-label { font-size:11px; color:var(--on-surface-variant); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.clean-level-seg { display:flex; background:var(--surface-variant); border-radius:10px; padding:3px; gap:2px; }
+.clean-level-seg button { flex:1; height:32px; border:none; background:transparent; color:var(--on-surface-variant); font-size:12px; font-weight:500; border-radius:8px; cursor:pointer; transition:background .15s,color .15s; font-family:inherit; }
+.clean-level-seg button.active { background:var(--primary); color:#000; }
 /* PROCESS BUTTON */
 #process-btn-wrap {
   padding:12px 16px calc(12px + var(--safe-b));
@@ -531,6 +537,14 @@ body {
 
 <!-- FAB -->
 <div id="process-btn-wrap" class="hidden">
+  <div class="clean-level-wrap">
+    <div class="clean-level-label">Output style</div>
+    <div class="clean-level-seg">
+      <button id="lvl-verbatim" onclick="setLevel('verbatim')">Verbatim</button>
+      <button id="lvl-clean" class="active" onclick="setLevel('clean')">Clean</button>
+      <button id="lvl-structured" onclick="setLevel('structured')">Structured</button>
+    </div>
+  </div>
   <button class="btn-filled w-full" style="height:48px;font-size:15px" onclick="processNotes()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
     Process Notes
@@ -662,6 +676,7 @@ const S = {
   theme: 'dark',
   apiKey: '',
   sheetsOpen: 0,
+  cleanLevel: 'clean',
 };
 
 
@@ -788,6 +803,14 @@ function updateFAB() {
   document.getElementById('process-btn-wrap').classList.toggle('hidden', !(S.view === 'capture' && S.files.length > 0));
 }
 
+// -- CLEANING LEVEL -----------------------------------------------------------
+function setLevel(level) {
+  S.cleanLevel = level;
+  ['verbatim','clean','structured'].forEach(l => {
+    document.getElementById('lvl-' + l).classList.toggle('active', l === level);
+  });
+}
+
 // -- PROCESS ------------------------------------------------------------------
 async function processNotes() {
   if (!S.apiKey) { switchView('settings'); snack('Add your API key in Settings'); return; }
@@ -795,7 +818,22 @@ async function processNotes() {
 
   setProcessing(true);
 
-  const PROMPT = `You are a handwriting transcription assistant. Your job is to READ and TRANSCRIBE — not to rewrite, improve, or paraphrase. The writer's original words, voice, and phrasing must be preserved exactly. Never substitute the writer's words with cleaner or more formal alternatives.
+  const PROMPTS = {
+    verbatim: `You are a handwriting transcription assistant. Your only job is to copy exactly what is written — nothing more.
+
+Analyze the provided image(s) of handwritten notes. Treat multiple images as consecutive pages of one note.
+
+Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
+{
+  "title": "concise topic title max 8 words",
+  "transcription": "copy every word exactly as written — preserve all abbreviations, shorthand, symbols, crossed-out words, misspellings, incomplete sentences, and original line breaks. Do not correct, expand, or infer anything.",
+  "organized_text": "same content as transcription but with minimal markdown structure: use line breaks to separate sections as the writer laid them out. Use ## only where the writer drew a clear section break or heading. Do not add any headings, bullets, or formatting that was not in the original. Do not rephrase a single word.",
+  "summary": ["key point copied verbatim from the notes", "key point copied verbatim from the notes", "key point copied verbatim from the notes"],
+  "tags": ["tag1", "tag2", "tag3"],
+  "confidence_notes": "list every word or phrase you were uncertain about"
+}`,
+
+    clean: `You are a handwriting transcription assistant. Your job is to READ and TRANSCRIBE — not to rewrite, improve, or paraphrase. The writer's original words, voice, and phrasing must be preserved exactly. Never substitute the writer's words with cleaner or more formal alternatives.
 
 Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. Treat multiple images as consecutive pages of one note.
 
@@ -807,7 +845,24 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
   "summary": ["brief point using the writer's own words", "brief point using the writer's own words", "brief point using the writer's own words"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
-}`;
+}`,
+
+    structured: `You are a professional note editor. Transform the handwritten notes in the image(s) into a fully polished, well-structured document. Your goal is maximum clarity and usefulness — reorganize, rewrite, and enrich as needed while staying true to the original ideas.
+
+Analyze the provided image(s) of handwritten notes. Treat multiple images as consecutive pages of one note.
+
+Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
+{
+  "title": "clear descriptive title max 8 words",
+  "transcription": "clean readable transcription of what was written, with obvious errors corrected and abbreviations expanded",
+  "organized_text": "a fully restructured markdown document — use # for the main title, ## for logical sections (group related ideas even if scattered in the original), **bold** for key terms and concepts, bullet lists for items, numbered lists where sequence matters, and short prose paragraphs for explanations. Rewrite sentences for clarity where needed. Fill in obvious gaps in reasoning. If the notes contain non-English words or phrases (including Nigerian languages like Igbo, Yoruba, Hausa, or any other language), add an English translation in parentheses. If diagrams or figures are present, describe them clearly and list all labels exactly as written.",
+  "summary": ["polished key takeaway", "polished key takeaway", "polished key takeaway"],
+  "tags": ["tag1", "tag2", "tag3"],
+  "confidence_notes": "describe any unclear areas or assumptions made"
+}`
+  };
+
+  const PROMPT = PROMPTS[S.cleanLevel] || PROMPTS.clean;
 
   try {
     const parts = S.files.map(f => ({ inlineData: { mimeType: f.mimeType, data: f.base64.split(',')[1] } }));
@@ -859,6 +914,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
       summary: toArr(p.summary),
       tags: toArr(p.tags),
       confidence_notes: String(p.confidence_notes || '').trim(),
+      clean_level: S.cleanLevel,
       images: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -955,7 +1011,8 @@ function openNote(id) {
   S.originalText  = note.organized_text;
 
   document.getElementById('detail-title-input').value = note.title || '';
-  document.getElementById('detail-meta').textContent   = new Date(note.created_at).toLocaleString();
+  const levelLabel = note.clean_level ? ` · ${note.clean_level.charAt(0).toUpperCase() + note.clean_level.slice(1)}` : '';
+  document.getElementById('detail-meta').textContent   = new Date(note.created_at).toLocaleString() + levelLabel;
   document.getElementById('detail-organized').value    = note.organized_text || '';
   document.getElementById('detail-raw').textContent    = note.transcription || '';
   document.getElementById('detail-summary').innerHTML  = (note.summary || []).map(s => '<li>' + esc(s) + '</li>').join('');
