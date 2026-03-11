@@ -116,7 +116,7 @@ body {
 .nav-item.active .nav-indicator svg { transform:scale(1.1); }
 /* BUTTONS */
 .btn-filled {
-  height:40px; padding:0 24px; border-radius:20px;
+  height:40px; padding:0 24px; border-radius:999px;
   border:none; background:var(--primary); color:#fff;
   font-family:'Google Sans',sans-serif; font-size:14px; font-weight:500;
   cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -127,7 +127,7 @@ body {
 .btn-filled:active::before { opacity:.14; }
 .btn-filled:disabled { opacity:.4; cursor:not-allowed; }
 .btn-outlined {
-  height:40px; padding:0 24px; border-radius:20px;
+  height:40px; padding:0 24px; border-radius:999px;
   border:1px solid var(--outline); background:transparent; color:var(--primary);
   font-family:'Google Sans',sans-serif; font-size:14px; font-weight:500;
   cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -137,7 +137,7 @@ body {
 .btn-outlined:hover::before { opacity:.08; }
 .btn-outlined:active::before { opacity:.12; }
 .btn-text {
-  height:36px; padding:0 12px; border-radius:20px;
+  height:36px; padding:0 12px; border-radius:999px;
   border:none; background:transparent; color:var(--primary);
   font-family:'Google Sans',sans-serif; font-size:14px; font-weight:500;
   cursor:pointer; display:inline-flex; align-items:center; gap:6px;
@@ -581,7 +581,7 @@ body {
       <button id="lvl-structured" onclick="setLevel('structured')">Structured</button>
     </div>
   </div>
-  <button class="btn-filled w-full" style="height:48px;font-size:15px" onclick="processNotes()">
+  <button class="btn-filled w-full" style="height:48px;font-size:15px;border-radius:24px" onclick="processNotes()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
     Process Notes
   </button>
@@ -678,7 +678,7 @@ body {
   </svg>
   <div class="welcome-title">Scribe</div>
   <div class="welcome-sub">Photograph your handwritten pages — AI turns them into clean, organized notes stored privately on your device.</div>
-  <button class="btn-filled" style="height:48px;font-size:15px" onclick="startApp()">Get Started</button>
+  <button class="btn-filled" style="height:48px;font-size:15px;border-radius:24px" onclick="startApp()">Get Started</button>
 </div>
 
 <!-- LIGHTBOX -->
