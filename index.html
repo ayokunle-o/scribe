@@ -184,13 +184,23 @@ body {
 .previews-label { font-family:'Google Sans',sans-serif; font-size:12px; font-weight:500; letter-spacing:.6px; text-transform:uppercase; color:var(--on-surface-variant); }
 .previews-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; margin-bottom:16px; }
 .previews-scroll::-webkit-scrollbar { display:none; }
-.preview-thumb { position:relative; flex:0 0 88px; height:88px; border-radius:12px; overflow:hidden; box-shadow:var(--e1); }
+.preview-thumb { position:relative; flex:0 0 120px; height:120px; border-radius:12px; overflow:hidden; box-shadow:var(--e1); }
 .preview-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
 .rm-btn {
   position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%;
   background:rgba(0,0,0,.7); color:#fff; border:none; font-size:11px; cursor:pointer;
   display:flex; align-items:center; justify-content:center; line-height:1;
 }
+.page-badge {
+  position:absolute; bottom:4px; left:4px;
+  background:rgba(0,0,0,.7); color:#fff;
+  font-size:10px; font-weight:700; font-family:monospace;
+  padding:2px 5px; border-radius:4px; line-height:1.4;
+  pointer-events:none;
+}
+.preview-thumb { cursor:grab; user-select:none; }
+.preview-thumb.dragging { opacity:0.35; cursor:grabbing; }
+.preview-thumb.drag-over { outline:2px solid var(--primary); outline-offset:2px; }
 .processing-state { text-align:center; padding:56px 24px; }
 .processing-icon { margin-bottom:16px; animation:pulse 1.8s ease-in-out infinite; display:flex; justify-content:center; }
 @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.7} }
@@ -421,6 +431,10 @@ body {
           <button class="btn-text" style="color:var(--error)" onclick="clearFiles()">Clear All</button>
         </div>
         <div class="previews-scroll" id="previews-scroll"></div>
+        <div id="drag-hint" style="display:none;align-items:center;gap:5px;margin:-8px 0 12px;opacity:0;transition:opacity .4s;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--on-surface-variant);flex-shrink:0"><polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+          <span style="font-size:11px;color:var(--on-surface-variant);">Hold and drag to reorder pages &mdash; tap to preview</span>
+        </div>
         <div id="capture-error" class="error-card hidden">
           <div class="error-title">Something went wrong</div>
           <div class="error-msg" id="error-msg"></div>
@@ -776,16 +790,108 @@ function handleFiles(e) {
 function renderPreviews() {
   const wrap = document.getElementById('previews-scroll');
   wrap.innerHTML = '';
-  S.files.forEach(f => {
+  const total = S.files.length;
+  S.files.forEach((f, idx) => {
     const d = document.createElement('div');
     d.className = 'preview-thumb';
-    d.innerHTML = '<img src="' + f.base64 + '" alt=""><button class="rm-btn" onclick="removeFile(' + f.id + ')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+    d.dataset.id = f.id;
+    d.draggable = true;
+    const badge = total > 1 ? `<div class="page-badge">${idx + 1}</div>` : '';
+    d.innerHTML = `<img src="${f.base64}" alt="" onclick="openLightbox('${f.base64}')" style="cursor:zoom-in">${badge}<button class="rm-btn" onclick="removeFile(${f.id})"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+
+    // Desktop drag
+    d.addEventListener('dragstart', e => {
+      S._dragId = f.id;
+      setTimeout(() => d.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    d.addEventListener('dragend', () => d.classList.remove('dragging'));
+    d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('drag-over'); });
+    d.addEventListener('dragleave', () => d.classList.remove('drag-over'));
+    d.addEventListener('drop', e => {
+      e.preventDefault();
+      d.classList.remove('drag-over');
+      const fromId = S._dragId;
+      const toId = f.id;
+      if (fromId === toId) return;
+      const fi = S.files.findIndex(x => x.id === fromId);
+      const ti = S.files.findIndex(x => x.id === toId);
+      const [moved] = S.files.splice(fi, 1);
+      S.files.splice(ti, 0, moved);
+      renderPreviews();
+    });
+
+    // Touch drag
+    let touchStartX, touchStartY, touchClone, touchFromId;
+    let longPressTimer = null;
+    let didDrag = false;
+    d.addEventListener('touchstart', e => {
+      if (e.target.closest('.rm-btn')) return;
+      didDrag = false;
+      touchFromId = f.id;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      // Long press (300ms) activates drag
+      longPressTimer = setTimeout(() => {
+        touchClone = d.cloneNode(true);
+        touchClone.style.cssText = `position:fixed;z-index:9999;opacity:0.8;pointer-events:none;width:110px;height:110px;border-radius:12px;overflow:hidden;`;
+        document.body.appendChild(touchClone);
+      }, 300);
+    }, { passive: true });
+    d.addEventListener('touchmove', e => {
+      const tx = e.touches[0].clientX;
+      const ty = e.touches[0].clientY;
+      const moved = Math.abs(tx - touchStartX) > 6 || Math.abs(ty - touchStartY) > 6;
+      if (!moved) return;
+      didDrag = true;
+      if (!touchClone) return;
+      e.preventDefault();
+      touchClone.style.left = (tx - 55) + 'px';
+      touchClone.style.top = (ty - 55) + 'px';
+      d.classList.add('dragging');
+      document.querySelectorAll('.preview-thumb').forEach(el => el.classList.remove('drag-over'));
+      const el = document.elementFromPoint(tx, ty)?.closest('.preview-thumb');
+      if (el && el !== d) el.classList.add('drag-over');
+    }, { passive: false });
+    d.addEventListener('touchend', e => {
+      clearTimeout(longPressTimer);
+      if (!didDrag && !touchClone) {
+        // Quick tap — open lightbox
+        openLightbox(f.base64);
+        return;
+      }
+      if (!touchClone) return;
+      const tx = e.changedTouches[0].clientX;
+      const ty = e.changedTouches[0].clientY;
+      touchClone.remove(); touchClone = null;
+      d.classList.remove('dragging');
+      document.querySelectorAll('.preview-thumb').forEach(el => el.classList.remove('drag-over'));
+      const target = document.elementFromPoint(tx, ty)?.closest('.preview-thumb');
+      if (target && target.dataset.id != touchFromId) {
+        const toId = parseInt(target.dataset.id);
+        const fi = S.files.findIndex(x => x.id === touchFromId);
+        const ti = S.files.findIndex(x => x.id === toId);
+        const [moved] = S.files.splice(fi, 1);
+        S.files.splice(ti, 0, moved);
+        renderPreviews();
+      }
+    });
+
     wrap.appendChild(d);
   });
   const has = S.files.length > 0;
   hide('capture-idle', has);
   hide('capture-files', !has);
   if (has) hide('capture-error', true);
+  // Show drag hint only when 2+ images
+  const hint = document.getElementById('drag-hint');
+  if (S.files.length > 1) {
+    hint.style.display = 'flex';
+    requestAnimationFrame(() => { hint.style.opacity = '1'; });
+  } else {
+    hint.style.opacity = '0';
+    setTimeout(() => { if (S.files.length <= 1) hint.style.display = 'none'; }, 400);
+  }
   updateFAB();
 }
 
@@ -821,7 +927,7 @@ async function processNotes() {
   const PROMPTS = {
     verbatim: `You are a handwriting transcription assistant. Your only job is to copy exactly what is written — nothing more.
 
-Analyze the provided image(s) of handwritten notes. If multiple images are provided, they are labeled Page 1, Page 2, etc. — treat them as consecutive pages in that exact order. Transcribe page by page in sequence.
+Analyze the provided image(s) of handwritten notes. If multiple images are provided, each image has a "PAGE X OF Y" label stamped in the top-left corner. Transcribe them strictly in that order: Page 1 first, then Page 2, and so on.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
@@ -835,7 +941,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 
     clean: `You are a handwriting transcription assistant. Your job is to READ and TRANSCRIBE — not to rewrite, improve, or paraphrase. The writer's original words, voice, and phrasing must be preserved exactly. Never substitute the writer's words with cleaner or more formal alternatives.
 
-Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. If multiple images are provided, they are labeled Page 1, Page 2, etc. — treat them as consecutive pages in that exact order.
+Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. If multiple images are provided, each image has a "PAGE X OF Y" label stamped in the top-left corner. Always process them in that order.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
@@ -849,7 +955,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 
     structured: `You are a professional note editor. Transform the handwritten notes in the image(s) into a fully polished, well-structured document. Your goal is maximum clarity and usefulness — reorganize, rewrite, and enrich as needed while staying true to the original ideas.
 
-Analyze the provided image(s) of handwritten notes. If multiple images are provided, they are labeled Page 1, Page 2, etc. — treat them as consecutive pages in that exact order.
+Analyze the provided image(s) of handwritten notes. If multiple images are provided, each image has a "PAGE X OF Y" label stamped in the top-left corner. Always process them in that order.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
@@ -864,12 +970,44 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 
   const PROMPT = PROMPTS[S.cleanLevel] || PROMPTS.clean;
 
+  // Stamp page number onto each image using Canvas before sending
+  async function stampImage(base64, pageNum, total) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        if (total > 1) {
+          const label = `PAGE ${pageNum} OF ${total}`;
+          const fontSize = Math.max(20, Math.round(img.width * 0.04));
+          ctx.font = `bold ${fontSize}px monospace`;
+          const padding = Math.round(fontSize * 0.6);
+          const tw = ctx.measureText(label).width;
+          const bw = tw + padding * 2;
+          const bh = fontSize + padding * 2;
+          // Draw banner at top-left
+          ctx.fillStyle = 'rgba(0,0,0,0.75)';
+          ctx.fillRect(0, 0, bw, bh);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(label, padding, fontSize + Math.round(padding * 0.6));
+        }
+        resolve(canvas.toDataURL('image/jpeg', 0.92).split(',')[1]);
+      };
+      img.src = base64;
+    });
+  }
+
   try {
     const total = S.files.length;
+    const stampedFiles = await Promise.all(
+      S.files.map((f, i) => stampImage(f.base64, i + 1, total))
+    );
     const parts = [];
-    S.files.forEach((f, i) => {
-      if (total > 1) parts.push({ text: `--- Page ${i + 1} of ${total} ---` });
-      parts.push({ inlineData: { mimeType: f.mimeType, data: f.base64.split(',')[1] } });
+    stampedFiles.forEach(data => {
+      parts.push({ inlineData: { mimeType: 'image/jpeg', data } });
     });
     parts.push({ text: PROMPT });
 
