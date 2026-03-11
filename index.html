@@ -293,6 +293,8 @@ body {
   font-size:17px; font-weight:500; line-height:1.35;
   color:var(--on-surface); margin:14px 0 6px;
 }
+.prose-view h1 + h2 { margin-top:6px; }
+.prose-view p:empty { display:none; }
 .prose-view h3 {
   font-family:'Google Sans',sans-serif;
   font-size:15px; font-weight:500; line-height:1.4;
@@ -798,7 +800,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
   "transcription": "raw handwriting as clean digital text preserving original structure",
-  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate.",
+  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate. If diagrams or figures are present, capture every single label, number, variable, and expression visible in or around them — nothing should be omitted. List all labels exactly as written including superscripts (e.g. x²y, not x^2y). Do not interpret or infer relationships, just faithfully record every piece of text associated with each figure.",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
@@ -1135,7 +1137,7 @@ function mdToHtml(text) {
     const line = lines[i];
     const trimmed = line.trim();
 
-    if (!trimmed) { closeList(); out.push('<br>'); continue; }
+    if (!trimmed) { closeList(); continue; }
 
     // Headings
     if (/^### /.test(trimmed)) { closeList(); out.push('<h3>' + inlineFormat(trimmed.slice(4)) + '</h3>'); continue; }
@@ -1172,7 +1174,7 @@ function mdToHtml(text) {
 
   closeList();
   // Collapse multiple consecutive <br> into one
-  return out.join('\n').replace(/(<br>\s*){2,}/g, '<br>').replace(/^<br>|<br>$/g,'');
+  return out.join('\n');
 }
 
 function renderOrganizedView(text) {
