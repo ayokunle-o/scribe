@@ -274,7 +274,7 @@ body {
 /* ── PROSE RENDERED VIEW ── */
 .prose-view {
   font-family:'Roboto',sans-serif;
-  font-size:15px; line-height:1.75;
+  font-size:15px; line-height:1.6;
   color:var(--on-surface);
   padding-bottom:4px;
 }
@@ -299,16 +299,16 @@ body {
   color:var(--primary); margin:12px 0 4px;
 }
 .prose-view p {
-  margin:0 0 12px; color:var(--on-surface);
+  margin:0 0 8px; color:var(--on-surface);
 }
 .prose-view p:last-child { margin-bottom:0; }
 .prose-view strong { font-weight:500; color:var(--on-surface); }
 .prose-view em { font-style:italic; color:var(--on-surface-variant); }
 .prose-view ul, .prose-view ol {
-  margin:0 0 12px; padding-left:20px;
+  margin:0 0 8px; padding-left:20px;
 }
 .prose-view li {
-  margin-bottom:6px; line-height:1.65;
+  margin-bottom:4px; line-height:1.55;
 }
 .prose-view li::marker { color:var(--primary); }
 .prose-view ol li::marker { color:var(--primary); font-weight:500; }
@@ -794,13 +794,11 @@ async function processNotes() {
 
   const PROMPT = `You are a handwriting transcription assistant. Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. Treat multiple images as consecutive pages of one note.
 
-If the notes contain diagrams, shapes, graphs, or figures, represent them using ASCII art or Unicode characters as faithfully as possible. For example, use lines (|, -, /, \\), corners (+), arrows (-->, <--), triangles (/\\), circles (( )), boxes ([ ]), and label them with any text visible in the original. Place these representations inline where they appear in the notes, not as a separate description.
-
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
-  "transcription": "raw handwriting as clean digital text preserving original structure, with ASCII/Unicode representations of any diagrams or shapes inline",
-  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate. Include ASCII/Unicode diagram representations where relevant using markdown code blocks.",
+  "transcription": "raw handwriting as clean digital text preserving original structure",
+  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate.",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
