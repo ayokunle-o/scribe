@@ -932,8 +932,8 @@ Analyze the provided image(s) of handwritten notes. If multiple images are provi
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
-  "transcription": "copy every word exactly as written — preserve all abbreviations, shorthand, symbols, crossed-out words, misspellings, incomplete sentences, and original line breaks. Do not correct, expand, or infer anything.",
-  "organized_text": "same content as transcription but with minimal markdown structure: use line breaks to separate sections as the writer laid them out. Use ## only where the writer drew a clear section break or heading. Do not add any headings, bullets, or formatting that was not in the original. Do not rephrase a single word.",
+  "transcription": "copy every word exactly as written — preserve all abbreviations, shorthand, symbols, crossed-out words, misspellings, and incomplete sentences. IMPORTANT: physical line breaks caused by the paper width are NOT intentional — join wrapped lines into continuous sentences as the writer intended. Only preserve a line break where the writer clearly started a new thought, paragraph, or section. Do not correct, expand, or infer anything.",
+  "organized_text": "same content as transcription, formatted into flowing paragraphs. Join lines that are continuations of the same sentence — do not treat every physical line break as a new paragraph. Only start a new paragraph where the writer clearly began a new thought or section. Use ## only where the writer drew a clear section break or heading. Do not rephrase a single word.",
   "summary": ["key point copied verbatim from the notes", "key point copied verbatim from the notes", "key point copied verbatim from the notes"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "list every word or phrase you were uncertain about"
