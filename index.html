@@ -800,7 +800,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
   "title": "concise topic title max 8 words",
   "transcription": "raw handwriting as clean digital text preserving original structure",
-  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate. If diagrams or figures are present, capture every single label, number, variable, and expression visible in or around them — nothing should be omitted. List all labels exactly as written including superscripts (e.g. x²y, not x^2y). Do not interpret or infer relationships, just faithfully record every piece of text associated with each figure.",
+  "organized_text": "a well-formatted markdown version - use # for main heading, ## for section headings, **bold** for key terms, bullet lists with -, numbered lists where order matters. Group related ideas under headings. Write in clear prose paragraphs where appropriate. If the notes contain non-English words or phrases (including Nigerian languages like Igbo, Yoruba, Hausa, or any other language), add an English translation in parentheses after every such phrase without exception — do not skip any. If diagrams or figures are present, capture every single label, number, variable, and expression visible in or around them — nothing should be omitted. List all labels exactly as written including superscripts (e.g. x²y, not x^2y). Do not interpret or infer relationships, just faithfully record every piece of text associated with each figure.",
   "summary": ["key point 1", "key point 2", "key point 3"],
   "tags": ["tag1", "tag2", "tag3"],
   "confidence_notes": "describe unclear words or leave as empty string"
@@ -813,14 +813,28 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
     const res = await fetch(API_URL(S.apiKey), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts }] })
+      body: JSON.stringify({
+        contents: [{ parts }],
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
+      })
     });
 
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
 
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!raw) throw new Error('AI returned an empty response. Please try again.');
+    const candidate = data.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const raw = candidate?.content?.parts?.[0]?.text;
+    console.error('[Scribe] finishReason:', finishReason, 'raw:', raw);
+    if (!raw) {
+      const reason = finishReason ? \` (reason: \${finishReason})\` : '';
+      throw new Error(\`AI returned an empty response\${reason}. Please try again.\`);
+    }
 
     // Robust extraction: strip fences, find outermost { }
     let str = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
