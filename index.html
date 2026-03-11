@@ -821,7 +821,7 @@ async function processNotes() {
   const PROMPTS = {
     verbatim: `You are a handwriting transcription assistant. Your only job is to copy exactly what is written — nothing more.
 
-Analyze the provided image(s) of handwritten notes. Treat multiple images as consecutive pages of one note.
+Analyze the provided image(s) of handwritten notes. If multiple images are provided, they are labeled Page 1, Page 2, etc. — treat them as consecutive pages in that exact order. Transcribe page by page in sequence.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
@@ -835,7 +835,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 
     clean: `You are a handwriting transcription assistant. Your job is to READ and TRANSCRIBE — not to rewrite, improve, or paraphrase. The writer's original words, voice, and phrasing must be preserved exactly. Never substitute the writer's words with cleaner or more formal alternatives.
 
-Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. Treat multiple images as consecutive pages of one note.
+Analyze the provided image(s) of handwritten notes. They may be messy, use shorthand or abbreviations. If multiple images are provided, they are labeled Page 1, Page 2, etc. — treat them as consecutive pages in that exact order.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
@@ -849,7 +849,7 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 
     structured: `You are a professional note editor. Transform the handwritten notes in the image(s) into a fully polished, well-structured document. Your goal is maximum clarity and usefulness — reorganize, rewrite, and enrich as needed while staying true to the original ideas.
 
-Analyze the provided image(s) of handwritten notes. Treat multiple images as consecutive pages of one note.
+Analyze the provided image(s) of handwritten notes. If multiple images are provided, they are labeled Page 1, Page 2, etc. — treat them as consecutive pages in that exact order.
 
 Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
 {
@@ -865,7 +865,12 @@ Return ONLY a valid JSON object - no markdown, no code fences, no extra text:
   const PROMPT = PROMPTS[S.cleanLevel] || PROMPTS.clean;
 
   try {
-    const parts = S.files.map(f => ({ inlineData: { mimeType: f.mimeType, data: f.base64.split(',')[1] } }));
+    const total = S.files.length;
+    const parts = [];
+    S.files.forEach((f, i) => {
+      if (total > 1) parts.push({ text: `--- Page ${i + 1} of ${total} ---` });
+      parts.push({ inlineData: { mimeType: f.mimeType, data: f.base64.split(',')[1] } });
+    });
     parts.push({ text: PROMPT });
 
     const res = await fetch(API_URL(S.apiKey), {
